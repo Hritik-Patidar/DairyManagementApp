@@ -1,0 +1,241 @@
+from PyQt5.QtWidgets import (
+    QWidget, QLabel, QLineEdit, QPushButton, QTextEdit,
+    QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox, QFrame
+)
+from PyQt5.QtCore import Qt
+
+from ui.manage_account import ManageAccountWidget
+from utils.send_whatsapp_bill import send_bill_to_whatsapp
+from ui.add_product import AddProductDialog
+from ui.add_transaction import AddTransactionDialog
+from ui.settle_account import SettleAccountDialog
+from ui.bill_print import BillPrintDialog
+from ui.view_history import ViewHistoryDialog
+from ui.add_account import AddAccountDialog
+from database import db_manager
+from utils.print_hindi_report import print_hindi_report
+
+
+class MainWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Dairy Management Dashboard")
+        self.setGeometry(200, 200, 1500, 700)
+        self.setStyleSheet("font-family: 'Segoe UI'; font-size: 11pt;")
+        self.init_ui()
+
+        # ... (imports and class declaration same as before)
+
+    def init_ui(self):
+        main_layout = QVBoxLayout()
+
+        # Top: Account input
+        account_row = QHBoxLayout()
+        self.account_input = QLineEdit()
+        self.account_input.setPlaceholderText("Enter Account Number")
+
+        self.fetch_button = QPushButton("खाता देखे ")
+        self.fetch_button.clicked.connect(self.fetch_account_info)
+
+        account_row.addWidget(QLabel("Account No:"))
+        account_row.addWidget(self.account_input)
+        account_row.addWidget(self.fetch_button)
+
+        main_layout.addLayout(account_row)
+        main_layout.addWidget(self._separator())
+
+        # Info Display
+        self.name_label = QLabel("किसान का नाम: —")
+        self.name_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
+
+        self.balance_label = QLabel("शेष राशि: ₹0.00")
+        self.balance_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
+
+        main_layout.addWidget(self.name_label)
+        main_layout.addWidget(self.balance_label)
+
+        # 🔁 Horizontal transaction display boxes
+        tx_layout = QHBoxLayout()
+
+        left_box = QVBoxLayout()
+        left_label = QLabel(" हफ़्ता :")
+        self.purchase_display = QTextEdit()
+        self.purchase_display.setReadOnly(True)
+        self.purchase_display.setMinimumHeight(200)
+        left_box.addWidget(left_label)
+        left_box.addWidget(self.purchase_display)
+
+        right_box = QVBoxLayout()
+        right_label = QLabel("💵 नकद /🛒 खरीद लेनदेन / सेटलमेंट:")
+        self.payment_display = QTextEdit()
+        self.payment_display.setReadOnly(True)
+        self.payment_display.setMinimumHeight(200)
+        right_box.addWidget(right_label)
+        right_box.addWidget(self.payment_display)
+
+        tx_layout.addLayout(left_box)
+        tx_layout.addLayout(right_box)
+        main_layout.addLayout(tx_layout)
+
+        main_layout.addWidget(self._separator())
+
+        # Button Grid (same as before)
+        button_grid = QGridLayout()
+        button_grid.setSpacing(12)
+
+        buttons = {
+            "👤 खाता जोड़ें": self.manage_account,
+            "🛒 खरीद जोड़ें": lambda: self.open_transaction("purchase"),
+            "📥 हफ़्ता जोड़ें": lambda: self.open_transaction("add_balance"),
+            "💵 नकद दी गई राशि जोड़ें": lambda: self.open_transaction("payment"),
+            "✅ खाता सेटल करें": self.open_settle_account,
+            "📦 उत्पाद जोड़ें": self.open_add_product,
+            "🖨️ बिल प्रिंट करें": self.open_print_bill,
+            "📜 लेनदेन देखें": self.open_view_history,
+            "🗓️ दैनिक रिपोर्ट": self.generate_report,
+            "📤 व्हाट्सएप बिल भेजें": self.send_whatsapp_bill,
+        }
+
+        for i, (label, func) in enumerate(buttons.items()):
+            btn = QPushButton(label)
+            btn.setMinimumWidth(140)
+            btn.clicked.connect(func)
+            button_grid.addWidget(btn, i // 4, i % 4)
+
+        main_layout.addLayout(button_grid)
+        self.setLayout(main_layout)
+
+    def _separator(self):
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        return line
+
+    def get_account_no(self):
+        acc = self.account_input.text().strip()
+        return int(acc) if acc.isdigit() else None
+
+    def fetch_account_info(self):
+        try:
+            acc_no = self.get_account_no()
+            if acc_no is None:
+                QMessageBox.warning(self, "Invalid", "Please enter a valid account number.")
+                return
+
+            farmer = db_manager.get_farmer_main(acc_no)
+            if not farmer:
+                QMessageBox.information(self, "Not Found", "Farmer not found. Please add them first.")
+                self.name_label.setText("किसान का नाम: —")
+                self.balance_label.setText("शेष राशि: ₹0.00")
+                self.purchase_display.clear()
+                self.payment_display.clear()
+                return
+
+            name = farmer[1]
+            balance = farmer[3]
+            self.name_label.setText(f"किसान का नाम: {name}")
+            self.balance_label.setText(f"शेष राशि: ₹{balance:.2f}")
+
+            transactions = db_manager.get_transactions(acc_no)
+            purchase_text = ""
+            payment_text = ""
+
+            for date, t_type, product, amount, proof in transactions:
+                hindi_type = {
+                    "purchase": "खरीद",
+                    "payment_give": "नकद दी गई राशि",
+                    "payment_take": "नकद किसान द्वारा",
+                    "add_balance": "हफ़्ता",
+                    "settled": "खाता सेटल"
+                }.get(t_type, t_type)
+
+                entry = f"[{date}] {hindi_type} - {product or ''} -> ₹{amount} ({proof or 'No proof'})\n"
+
+                if t_type == "add_balance":
+                    purchase_text += entry
+
+                elif t_type=="purchase":
+                    payment_text += entry
+
+                elif t_type=="payment_take":
+                    purchase_text += entry
+                else :
+                    payment_text += entry
+
+            self.purchase_display.setText(purchase_text or "कोई खरीद नहीं मिली।")
+            self.payment_display.setText(payment_text or "कोई अन्य लेन-देन नहीं मिला।")
+
+        except Exception as e:
+            QMessageBox.critical(self, "त्रुटि", f"जानकारी प्राप्त करते समय त्रुटि हुई:\n{str(e)}")
+
+    def open_add_account(self):
+        dialog = AddAccountDialog(self)
+        dialog.exec_()
+
+    def open_transaction(self, t_type):
+        acc_no = self.get_account_no()
+        if acc_no is None:
+            QMessageBox.warning(self, "Invalid", "कृपया पहले एक मान्य खाता संख्या दर्ज करें।.")
+            return
+        dialog = AddTransactionDialog(account_no=acc_no, tx_type=t_type, parent=self)
+        if dialog.exec_():
+            self.fetch_account_info()
+
+    def open_settle_account(self):
+        acc_no = self.get_account_no()
+        if acc_no is not None:
+            dialog = SettleAccountDialog(account_no=acc_no, parent=self)
+            if dialog.exec_():
+                self.fetch_account_info()
+
+    def open_add_product(self):
+        dialog = AddProductDialog(self)
+        dialog.exec_()
+
+    def open_print_bill(self):
+        try:
+            acc_no = self.get_account_no()
+            if acc_no is not None:
+                dialog = BillPrintDialog(account_no=acc_no, parent=self)
+                dialog.exec_()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed:\n{str(e)}")
+
+    def open_view_history(self):
+        acc_no = self.get_account_no()
+        if acc_no is not None:
+            dialog = ViewHistoryDialog(account_no=acc_no, parent=self)
+            dialog.exec_()
+
+    def generate_report(self):
+        try:
+            print_hindi_report()
+            QMessageBox.information(self, "Success", "Daily report generated successfully.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate report:\n{str(e)}")
+
+    def send_whatsapp_bill(self):
+        acc_no = self.get_account_no()
+        if acc_no is None:
+            QMessageBox.warning(self, "Invalid", "कृपया एक मान्य खाता संख्या दर्ज करें।")
+            return
+
+        farmer = db_manager.get_farmer(acc_no)
+        if not farmer:
+            QMessageBox.warning(self, "Not Found", "किसान नहीं मिला। कृपया पहले खाता जोड़ें।")
+            return
+
+        phone = farmer[2]
+        if not phone or len(phone.strip()) < 10:
+            QMessageBox.warning(self, "Missing", "इस किसान के पास वैध फ़ोन नंबर उपलब्ध नहीं है।")
+            return
+
+        try:
+            send_bill_to_whatsapp(acc_no, phone)
+            QMessageBox.information(self, "✅ Success", f"{phone} पर बिल भेज दिया गया।")
+        except Exception as e:
+            QMessageBox.critical(self, "❌ Error", f"बिल भेजने में विफल:\n{str(e)}")
+
+    def manage_account(self):
+        self.manage_window = ManageAccountWidget()
+        self.manage_window.show()
