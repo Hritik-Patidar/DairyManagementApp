@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QFileDialog, QMessageBox, QHBoxLayout
 )
 from database import db_manager
-from utils.thermal_printer import print_small_receipt  # ✅ Import safely
+from utils.thermal_printer import print_small_receipt
 
 class BillPrintDialog(QDialog):
     def __init__(self, account_no, parent=None):
@@ -24,7 +24,7 @@ class BillPrintDialog(QDialog):
         farmer = db_manager.get_farmer(self.account_no)
         transactions = db_manager.get_transactions(self.account_no, limit=50)
 
-        bill_text = f"Farmer: {farmer[1]}\nAccount No: {self.account_no}\nPhone: {farmer[2]}\nBalance: ₹{farmer[3]:.2f}\n\n"
+        bill_text = f"Farmer: {farmer['name']}\nAccount No: {self.account_no}\nPhone: {farmer['phone']}\nBalance: ₹{farmer['balance']:.2f}\n\n"
         bill_text += "Recent Transactions:\n----------------------\n"
 
         for t in transactions:
@@ -61,8 +61,8 @@ class BillPrintDialog(QDialog):
         try:
             print_small_receipt(
                 account_no=self.account_no,
-                farmer_name=self.farmer[1],
-                balance=self.farmer[3],
+                farmer_name=self.farmer['name'],
+                balance=self.farmer['balance'],
                 transactions=self.transactions
             )
             QMessageBox.information(self, "Printed", "Receipt sent to thermal printer.")

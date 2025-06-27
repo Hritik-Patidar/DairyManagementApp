@@ -2,9 +2,10 @@ from PyQt5.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton, QTextEdit,
     QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox, QFrame
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 
 from ui.manage_account import ManageAccountWidget
+from ui.show_all_report import ShowAllReportWidget
 from utils.send_whatsapp_bill import send_bill_to_whatsapp
 from ui.add_product import AddProductDialog
 from ui.add_transaction import AddTransactionDialog
@@ -19,12 +20,13 @@ from utils.print_hindi_report import print_hindi_report
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Dairy Management Dashboard")
-        self.setGeometry(200, 200, 1500, 700)
-        self.setStyleSheet("font-family: 'Segoe UI'; font-size: 11pt;")
+        self.setWindowTitle("Dairy Management Dashboard")#
+        # self.setGeometry(200, 200, 1500, 700)
+        self.setStyleSheet("font-family: 'Segoe UI'; font-size: 13pt;")
         self.init_ui()
 
-        # ... (imports and class declaration same as before)
+        QTimer.singleShot(100, self.showMaximized)
+
 
     def init_ui(self):
         main_layout = QVBoxLayout()
@@ -32,8 +34,8 @@ class MainWindow(QWidget):
         # Top: Account input
         account_row = QHBoxLayout()
         self.account_input = QLineEdit()
-        self.account_input.setPlaceholderText("Enter Account Number")
-
+        self.account_input.setPlaceholderText("खाता नंबर दर्ज करे")
+        self.account_input.returnPressed.connect(self.fetch_account_info)
         self.fetch_button = QPushButton("खाता देखे ")
         self.fetch_button.clicked.connect(self.fetch_account_info)
 
@@ -84,15 +86,17 @@ class MainWindow(QWidget):
         button_grid.setSpacing(12)
 
         buttons = {
-            "👤 खाता जोड़ें": self.manage_account,
+            "👨‍🌾 किसान खाता प्रबंधन": self.manage_account,
             "🛒 खरीद जोड़ें": lambda: self.open_transaction("purchase"),
             "📥 हफ़्ता जोड़ें": lambda: self.open_transaction("add_balance"),
-            "💵 नकद दी गई राशि जोड़ें": lambda: self.open_transaction("payment"),
+            "💵 नकद दी गई राशि जोड़ें": lambda: self.open_transaction("payment_give"),
+            "💵 नकद किसान द्वारा जोड़ें": lambda: self.open_transaction("payment_take"),
             "✅ खाता सेटल करें": self.open_settle_account,
             "📦 उत्पाद जोड़ें": self.open_add_product,
-            "🖨️ बिल प्रिंट करें": self.open_print_bill,
+            "🖨️ बिल प्रिंट करें": self.open_small_bill,
             "📜 लेनदेन देखें": self.open_view_history,
             "🗓️ दैनिक रिपोर्ट": self.generate_report,
+            "🗓️ दैनिक रिपोर्ट 2": self.show_all_report,
             "📤 व्हाट्सएप बिल भेजें": self.send_whatsapp_bill,
         }
 
@@ -119,12 +123,12 @@ class MainWindow(QWidget):
         try:
             acc_no = self.get_account_no()
             if acc_no is None:
-                QMessageBox.warning(self, "Invalid", "Please enter a valid account number.")
+                QMessageBox.warning(self, "Invalid", "कृपया सही खाता संख्या दर्ज करें.")
                 return
 
             farmer = db_manager.get_farmer_main(acc_no)
             if not farmer:
-                QMessageBox.information(self, "Not Found", "Farmer not found. Please add them first.")
+                QMessageBox.information(self, "Not Found", "किसान नहीं मिला। कृपया पहले उन्हें जोड़ें.")
                 self.name_label.setText("किसान का नाम: —")
                 self.balance_label.setText("शेष राशि: ₹0.00")
                 self.purchase_display.clear()
@@ -136,7 +140,7 @@ class MainWindow(QWidget):
             self.name_label.setText(f"किसान का नाम: {name}")
             self.balance_label.setText(f"शेष राशि: ₹{balance:.2f}")
 
-            transactions = db_manager.get_transactions(acc_no)
+            transactions = db_manager.get_transactions(acc_no,limit=600)
             purchase_text = ""
             payment_text = ""
 
@@ -149,7 +153,7 @@ class MainWindow(QWidget):
                     "settled": "खाता सेटल"
                 }.get(t_type, t_type)
 
-                entry = f"[{date}] {hindi_type} - {product or ''} -> ₹{amount} ({proof or 'No proof'})\n"
+                entry = f"[{date}] {hindi_type} - {product or ''} -> ₹{amount} ({proof or ' '})\n"
 
                 if t_type == "add_balance":
                     purchase_text += entry
@@ -159,11 +163,14 @@ class MainWindow(QWidget):
 
                 elif t_type=="payment_take":
                     purchase_text += entry
+                elif t_type=="settled":
+                    payment_text += entry
+                    break
                 else :
                     payment_text += entry
 
-            self.purchase_display.setText(purchase_text or "कोई खरीद नहीं मिली।")
-            self.payment_display.setText(payment_text or "कोई अन्य लेन-देन नहीं मिला।")
+            self.purchase_display.setText(purchase_text or "कोई अन्य लेन-देन नहीं मिला।")
+            self.payment_display.setText(payment_text or "कोई खरीद नहीं मिली।")
 
         except Exception as e:
             QMessageBox.critical(self, "त्रुटि", f"जानकारी प्राप्त करते समय त्रुटि हुई:\n{str(e)}")
@@ -192,14 +199,18 @@ class MainWindow(QWidget):
         dialog = AddProductDialog(self)
         dialog.exec_()
 
-    def open_print_bill(self):
+    def open_small_bill(self):
         try:
             acc_no = self.get_account_no()
             if acc_no is not None:
-                dialog = BillPrintDialog(account_no=acc_no, parent=self)
+                dialog = BillPrintDialog(account_no=acc_no)
                 dialog.exec_()
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed:\n{str(e)}")
+            import traceback
+            print("❌ ERROR:", traceback.format_exc())
+            QMessageBox.critical(self, "Crash", f"त्रुटि:\n{str(e)}")
+        # except Exception as e:
+        #     QMessageBox.critical(self, "Error", f"Failed:\n{str(e)}")
 
     def open_view_history(self):
         acc_no = self.get_account_no()
@@ -239,3 +250,7 @@ class MainWindow(QWidget):
     def manage_account(self):
         self.manage_window = ManageAccountWidget()
         self.manage_window.show()
+
+    def show_all_report(self):
+        self.report_win = ShowAllReportWidget()
+        self.report_win.show()

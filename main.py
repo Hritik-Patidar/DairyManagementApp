@@ -1,9 +1,8 @@
 # main.py
-
 import sys
+
 from PyQt5.QtWidgets import QApplication
 from ui.main_window import MainWindow
-
 # ✅ Import and setup DB before launching UI
 from database.db_setup import setup_database, DB_PATH
 

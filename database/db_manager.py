@@ -8,6 +8,22 @@ def get_connection():
     return sqlite3.connect(DB_PATH)
 
 # --- FARMER FUNCTIONS ---
+def get_filtered_transactions(account_no, start_date, end_date):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT date, type, product_name, proof, amount
+        FROM transactions
+        WHERE account_no = ?
+        AND DATE(date) BETWEEN DATE(?) AND DATE(?)
+        ORDER BY date DESC
+    """, (account_no, start_date, end_date))
+    result = cursor.fetchall()
+    conn.close()
+    return result
+
+
+
 
 def get_farmer_main(account_no):
     conn = get_connection()
@@ -27,6 +43,18 @@ def get_transactions(account_no, limit=5):
         ORDER BY date DESC 
         LIMIT ?
     """, (account_no, limit))
+    results = cursor.fetchall()
+    conn.close()
+    return results
+def get_all_transactions(limit):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT account_no, date, type, product_name, amount, proof 
+        FROM transactions
+        ORDER BY date DESC 
+        LIMIT ?
+    """, (limit,))  # ✅ Tuple form में pass करें
     results = cursor.fetchall()
     conn.close()
     return results
