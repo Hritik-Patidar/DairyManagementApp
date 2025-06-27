@@ -144,7 +144,7 @@ class ShowAllReportWidget(QWidget):
         return {
             "purchase": "खरीद",
             "payment_give": "नकद दी गई राशि",
-            "payment_take": "नकद किसान द्वारा",
+            "payment_take": "नकद किसान द्वारा/बाकी",
             "add_balance": "हफ़्ता",
             "settled": "सेटल"
         }.get(tx_type, tx_type)

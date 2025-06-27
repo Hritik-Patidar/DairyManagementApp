@@ -90,13 +90,13 @@ class MainWindow(QWidget):
             "🛒 खरीद जोड़ें": lambda: self.open_transaction("purchase"),
             "📥 हफ़्ता जोड़ें": lambda: self.open_transaction("add_balance"),
             "💵 नकद दी गई राशि जोड़ें": lambda: self.open_transaction("payment_give"),
-            "💵 नकद किसान द्वारा जोड़ें": lambda: self.open_transaction("payment_take"),
+            "💵 नकद किसान द्वारा जोड़ें/बाकी": lambda: self.open_transaction("payment_take"),
             "✅ खाता सेटल करें": self.open_settle_account,
             "📦 उत्पाद जोड़ें": self.open_add_product,
             "🖨️ बिल प्रिंट करें": self.open_small_bill,
             "📜 लेनदेन देखें": self.open_view_history,
             "🗓️ दैनिक रिपोर्ट": self.generate_report,
-            "🗓️ दैनिक रिपोर्ट 2": self.show_all_report,
+            "🗓️रिपोर्ट": self.show_all_report,
             "📤 व्हाट्सएप बिल भेजें": self.send_whatsapp_bill,
         }
 
@@ -148,12 +148,12 @@ class MainWindow(QWidget):
                 hindi_type = {
                     "purchase": "खरीद",
                     "payment_give": "नकद दी गई राशि",
-                    "payment_take": "नकद किसान द्वारा",
+                    "payment_take": "नकद किसान द्वारा/बाकी",
                     "add_balance": "हफ़्ता",
                     "settled": "खाता सेटल"
                 }.get(t_type, t_type)
 
-                entry = f"[{date}] {hindi_type} - {product or ''} -> ₹{amount} ({proof or ' '})\n"
+                entry = f"[{date}] {hindi_type} - {product or 'लेनदेन'} -> ₹{amount} ({proof or ' '})\n"
 
                 if t_type == "add_balance":
                     purchase_text += entry
@@ -236,7 +236,7 @@ class MainWindow(QWidget):
             QMessageBox.warning(self, "Not Found", "किसान नहीं मिला। कृपया पहले खाता जोड़ें।")
             return
 
-        phone = farmer[2]
+        phone = farmer['phone']
         if not phone or len(phone.strip()) < 10:
             QMessageBox.warning(self, "Missing", "इस किसान के पास वैध फ़ोन नंबर उपलब्ध नहीं है।")
             return

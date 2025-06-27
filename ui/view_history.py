@@ -17,7 +17,7 @@ class ViewHistoryDialog(QDialog):
         content = ""
         for tx in history:
             date, t_type, product, amount, proof = tx
-            content += f"{date} - {self.get_hindi_type(t_type)} - {product or ''} - ₹{amount} - {proof or ''}\n"
+            content += f"{date} - {self.get_hindi_type(t_type)} - {product or 'लेनदेन'} - ₹{amount} - {proof or ''}\n"
 
         self.text.setText(content or "No transactions found.")
         layout.addWidget(self.text)
@@ -26,7 +26,7 @@ class ViewHistoryDialog(QDialog):
         return {
             "purchase": "खरीद",
             "payment_give": "नकद दी गई राशि",
-            "payment_take": "नकद किसान द्वारा",
+            "payment_take": "नकद किसान द्वारा/बाकी",
             "add_balance": "हफ़्ता",
             "settled": "सेटल"
         }.get(tx_type, tx_type)

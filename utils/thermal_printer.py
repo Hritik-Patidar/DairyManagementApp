@@ -13,9 +13,9 @@ def print_small_receipt(account_no, farmer_name, balance, transactions):
     pdc.StartPage()
 
     font = win32ui.CreateFont({
-        "name": "Consolas",
-        "height": 18,
-        "weight": 400,
+        "name": "mangal",
+        "height": 22,
+        "weight": 700,
     })
     pdc.SelectObject(font)
 
@@ -32,9 +32,9 @@ def print_small_receipt(account_no, farmer_name, balance, transactions):
     write(f"Acc No: {account_no}")
     write(f"Name: {farmer_name}")
     write(f"Balance: ₹{balance:.2f}")
-    write("-" * 32)
-    write("Date        Type      Amt")
-    write("-" * 32)
+    write("-" * 50)
+    write("Date           Type     Amt")
+    write("-" * 50)
 
     # for tx in transactions[-5:]:
     #     date, tx_type, _, amount, _ = tx
@@ -43,25 +43,27 @@ def print_small_receipt(account_no, farmer_name, balance, transactions):
     #     write(line)
 
     for tx in transactions[0:11]:
-        date, tx_type, _, amount, _ = tx
-        date_short = date.split(" ")[0]
+        date, tx_type, product_name, amount, _ = tx
+        date_short = "-".join(date.split(" ")[0].split("-")[2::-1][:2])
 
         # ✅ हिंदी अनुवाद के लिए मैपिंग
         hindi_type = {
             "purchase": "खरीद",
-            "payment_give": "नकद दी गई राशि",
-            "payment_take": "नकद किसान द्वारा",
-            "add_balance": "हफ़्ता",
+            "payment_give": "नकद दी गई ",
+            "payment_take": "किसान/बाकी",
+            "add_balance": "हफ़्ता           ",
             "settled": "खाता सेटल"
         }.get(tx_type, tx_type)  # default: original tx_type
 
-        line = f"{date_short:<11}{hindi_type:<8}₹{amount:.2f}"
+        line = f"{date_short:<5}|{(hindi_type)[:13]:<13} {(product_name or 'लेनदेन')[:7]:<5} ₹{amount:.2f}"
         write(line)
+        if tx_type == "settled":
+            break
 
-    write("-" * 32)
+    write("-" * 50)
     write("Thank you!")
 
-    pdc.EndPage()
+    # pdc.EndPage()
     pdc.EndDoc()
     pdc.DeleteDC()
 
@@ -102,13 +104,13 @@ def print_report(account_no, farmer_name, phone, transactions,balance):
     # total = 0.0
     for tx in transactions:
         date, tx_type, product, proof, amount = tx
-        date_short = date.split(" ")[0]
+        date_short = "-".join(date.split(" ")[0].split("-")[2::-1][:2])
 
         hindi_type = {
             "purchase":     "खरीद     ",
             "payment_give": "नकद दी   ",
-            "payment_take": "किसान द्वारा",
-            "add_balance":  "हफ़्ता     ",
+            "payment_take": "किसान/बाकी",
+            "add_balance":  "हफ़्ता      ",
             "settled":      "सेटल     "
         }.get(tx_type, tx_type)
 
@@ -117,13 +119,13 @@ def print_report(account_no, farmer_name, phone, transactions,balance):
         except:
             amt = 0.0
 
-        line = f"{date_short:<11}{hindi_type[:7]:<7}{(product or '-')[:5]:<5}₹{amt:.2f}"
+        line = f"{date_short:<5}{hindi_type[:7]:<7}{(product or 'लेनदेन')[:7]:<7}₹{amt:.2f}"
         write(line)
 
     write("-" * 32)
     write(f"{'Avl Balance':<24}₹{balance:.2f}")
     write("🙏 धन्यवाद!")
 
-    pdc.EndPage()
+    # pdc.EndPage()
     pdc.EndDoc()
     pdc.DeleteDC()

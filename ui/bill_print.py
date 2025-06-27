@@ -29,7 +29,7 @@ class BillPrintDialog(QDialog):
 
         for t in transactions:
             date, t_type, product, amount, proof = t
-            bill_text += f"{date} - {t_type.upper()} - {product or 'N/A'} - ₹{amount} - {proof or ' '}\n"
+            bill_text += f"{date} - {t_type.upper()} - {product or 'लेनदेन'} - ₹{amount} - {proof or ' '}\n"
 
         self.text.setText(bill_text)
         self.farmer = farmer

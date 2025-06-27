@@ -43,12 +43,13 @@ def send_bill_to_whatsapp(account_no, phone):
             for date, tx_type, product, amount in txs:
                 hindi_type = {
                     "purchase": "खरीद",
-                    "payment": "नकद दी गई राशि",
-                    "add_balance": "हफ़्ता",
-                    "settled": "खाता सेटल"
-                }.get(tx_type, tx_type)
+                     "payment_give": "नकद दी गई राशि",
+                     "payment_take": "नकद किसान द्वारा/बाकी",
+                     "add_balance": "हफ़्ता",
+                     "settled": "सेटल"
+                      }.get(tx_type, tx_type)
                 date_short = date.split(" ")[0]
-                message += f"{date_short} - {hindi_type} - {product or 'N/A'} - ₹{amount:.2f}\n"
+                message += f"{date_short} - {hindi_type} - {product or 'लेनदेन'} - ₹{amount:.2f}\n"
 
         phone_number = f"+91{phone.strip()}"
         kit.sendwhatmsg_instantly(phone_number, message, wait_time=10, tab_close=False)

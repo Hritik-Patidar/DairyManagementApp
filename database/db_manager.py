@@ -33,7 +33,7 @@ def get_farmer_main(account_no):
     conn.close()
     return farmer
 
-def get_transactions(account_no, limit=5):
+def get_transactions(account_no, limit=20):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
