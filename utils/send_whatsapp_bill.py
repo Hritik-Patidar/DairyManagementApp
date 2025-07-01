@@ -40,16 +40,10 @@ def send_bill_to_whatsapp(account_no, phone):
             message = "पिछले 2 महीनों में कोई लेन-देन नहीं हुआ।"
         else:
             message = f"🧾 खाता संख्या {account_no} का 2 महीने का बिल:\n"
+            from utils.hindi_type import get_hindi_type
             for date, tx_type, product, amount in txs:
-                hindi_type = {
-                    "purchase": "खरीद",
-                     "payment_give": "नकद दी गई राशि",
-                     "payment_take": "नकद किसान द्वारा/बाकी",
-                     "add_balance": "हफ़्ता",
-                     "settled": "सेटल"
-                      }.get(tx_type, tx_type)
                 date_short = date.split(" ")[0]
-                message += f"{date_short} - {hindi_type} - {product or 'लेनदेन'} - ₹{amount:.2f}\n"
+                message += f"{date_short} - {get_hindi_type(tx_type)} - {product or 'लेनदेन'} - ₹{amount:.2f}\n"
 
         phone_number = f"+91{phone.strip()}"
         kit.sendwhatmsg_instantly(phone_number, message, wait_time=10, tab_close=False)

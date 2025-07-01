@@ -3,8 +3,7 @@ from PyQt5.QtWidgets import (
     QMessageBox
 )
 from PyQt5.QtGui import QFont
-from database import db_manager  # ensure your db_manager has required functions
-
+from database import db_manager
 
 class ManageAccountWidget(QWidget):
     def __init__(self):
@@ -91,6 +90,7 @@ class ManageAccountWidget(QWidget):
             "add": "✅ किसान जोड़ें",
             "edit": "🔄 अपडेट करें",
             "delete": "❌ खाता हटाएं"
+
         }[action_type])
 
     def autofill_fields(self):
@@ -160,3 +160,6 @@ class ManageAccountWidget(QWidget):
         self.account_input.clear()
         self.name_input.clear()
         self.phone_input.clear()
+
+
+

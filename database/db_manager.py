@@ -33,11 +33,11 @@ def get_farmer_main(account_no):
     conn.close()
     return farmer
 
-def get_transactions(account_no, limit=20):
+def get_transactions(account_no, limit=500):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT date, type, product_name, amount, proof 
+        SELECT date, type, product_name, proof ,amount
         FROM transactions 
         WHERE account_no = ? 
         ORDER BY date DESC 
@@ -158,12 +158,13 @@ def get_all_farmers():
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT account_no, name, phone FROM farmers ORDER BY account_no ASC")
+        cursor.execute("SELECT * FROM farmers ORDER BY account_no ASC")
         rows = cursor.fetchall()
         conn.close()
-        return [
-            {"account_no": row[0], "name": row[1], "phone": row[2]} for row in rows
-        ]
+        # return [
+        #     {"account_no": row[0], "name": row[1], "phone": row[2],"balance":row[3]} for row in rows
+        # ]
+        return rows
     except Exception as e:
         print("❌ Error in get_all_farmers:", e)
         return []
@@ -197,4 +198,68 @@ def delete_farmer(account_no):
         return deleted > 0
     except Exception as e:
         print("❌ Error in delete_farmer:", e)
+        return False
+
+
+
+def get_last_transactions(limit=15):
+    """
+    Get the latest N transactions for a given account number.
+    Returns a list of tuples: (date, type, product_name, proof, amount)
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT account_no, date , type, product_name, proof, amount
+            FROM transactions
+            ORDER BY date DESC
+            LIMIT ?
+        """, ( limit,))
+        results = cursor.fetchall()
+        conn.close()
+        return results
+    except Exception as e:
+        print("❌ Error fetching recent transactions:", e)
+        return []
+
+
+def delete_product(name):
+    """
+    Delete a product by its name.
+    Returns True if deleted, False if not found.
+    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM products WHERE name = ?", (name,))
+        conn.commit()
+        deleted = cursor.rowcount > 0
+        conn.close()
+        return deleted
+    except Exception as e:
+        print("❌ Error deleting product:", e)
+        return False
+
+def get_all_products_with_id():
+    """
+    Returns a list of all products as (id, name, price)
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, price FROM products")
+    results = cursor.fetchall()
+    conn.close()
+    return results
+def delete_product_by_id(product_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM products WHERE id = ?", (product_id,))
+        conn.commit()
+        deleted = cursor.rowcount > 0
+        conn.close()
+        return deleted
+    except Exception as e:
+        print("❌ Error deleting product by ID:", e)
         return False

@@ -7,7 +7,7 @@ from datetime import datetime
 
 DB_PATH = "data/dairy_management.db"
 
-def print_hindi_report():
+def print_balance_report():
     try:
         printer_name = win32print.GetDefaultPrinter()
         hPrinter = win32print.OpenPrinter(printer_name)
@@ -19,17 +19,17 @@ def print_hindi_report():
 
         font = win32ui.CreateFont({
             "name": "Mangal",   # ✅ Hindi font
-            "height": 24,       # Font size
+            "height": 34,       # Font size
             "weight": 400,
         })
         pdc.SelectObject(font)
 
-        y = 100
-        line_height = 40
+        y = 20
+        line_height = 36
 
         def write(text):
             nonlocal y
-            pdc.TextOut(100, y, text)
+            pdc.TextOut(22, y, text)
             y += line_height
 
         # Header
@@ -47,37 +47,55 @@ def print_hindi_report():
         total_balance = 0
         for acc_no, name, phone, balance in farmers:
             total_balance += balance
-            write(f"👤 खाता: {acc_no} | नाम: {name} | ₹{balance:.2f}")
+            write(f"👤खाता:{acc_no:<3}|नाम:{name[:11]:<11}|₹{balance:.2f}")
 
-            cursor.execute("""
-                SELECT date, type, product_name, amount, proof
-                FROM transactions
-                WHERE account_no = ? AND date LIKE ?
-                ORDER BY date
-            """, (acc_no, today + "%"))
-            transactions = cursor.fetchall()
+            # cursor.execute("""
+            #     SELECT date, type, product_name, amount, proof
+            #     FROM transactions
+            #     WHERE account_no = ? AND date LIKE ?
+            #     ORDER BY date
+            # """, (acc_no, today + "%"))
+            # transactions = cursor.fetchall()
 
-            if not transactions:
-                write("   🛈 आज कोई लेनदेन नहीं।")
-            else:
-                for tx in transactions[:10]:  # max 10 entries per farmer
-                    date, tx_type, product, amount, proof = tx
-                    time = date[11:16]
-
-                    # Hindi Type Mapping
-                    hindi_type = {
-                        "purchase": "खरीद",
-                        "payment": "नकद",
-                        "add_balance": "जमा",
-                        "settled": "सेटल"
-                    }.get(tx_type, tx_type)
-
-                    write(f"   [{time}] {hindi_type:<6} {product or '—'} ₹{amount:.2f}")
+            # if not transactions:
+            #     pass
+            #     # write(" 🛈 आज कोई लेनदेन नहीं।")
+            # else:
+            #     for tx in transactions:
+            #         date, tx_type, product, proof, amount = tx
+            #         date_short = "-".join(date.split(" ")[0].split("-")[2::-1][:2])
+            #
+            #         hindi_type = {
+            #             "purchase": "खरीद",
+            #             "payment_give": "नकद दी गई/बाकी ",
+            #             "payment_take": "किसान/देना",
+            #             "add_balance": "हफ़्ता           ",
+            #             "settled": "खाता सेटल"
+            #         }.get(tx_type, tx_type)
+            #
+            #         try:
+            #             amt = float(amount)
+            #         except:
+            #             amt = 0.0
+            #
+            #         prod = ''
+            #         if product is None:
+            #             prod = 'T'
+            #
+            #         elif tx_type == "settled":
+            #             prod = 'S'
+            #         else:
+            #             prod = 'P'
+            #
+            #         line = f"  {date_short:<5}->{hindi_type[:7]:<7}-:₹{amt:.2f} {prod}"
+            #         write(line)
 
             # write("-" * 40)
-
+        write("-" * 50)
         write(f"👥 कुल किसान: {len(farmers)}")
         write(f"💰 कुल बकाया राशि: ₹{total_balance:.2f}")
+        write("-" * 50)
+        write("🙏 धन्यवाद!")
 
         conn.close()
 
@@ -93,6 +111,4 @@ def print_hindi_report():
     except Exception as e:
         print("❌ Printing failed:", e)
 
-if __name__ == "__main__":
-    print_hindi_report()
 

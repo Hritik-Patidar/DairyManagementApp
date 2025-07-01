@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QFileDialog, QMessageBox, QHBoxLayout
 )
 from database import db_manager
-from utils.thermal_printer import print_small_receipt
+from utils.thermal_printer import print_report
 
 class BillPrintDialog(QDialog):
     def __init__(self, account_no, parent=None):
@@ -59,11 +59,13 @@ class BillPrintDialog(QDialog):
 
     def print_receipt(self):
         try:
-            print_small_receipt(
+            print_report(
                 account_no=self.account_no,
                 farmer_name=self.farmer['name'],
+                phone=self.farmer['phone'],
+                transactions=db_manager.get_transactions(self.account_no),
                 balance=self.farmer['balance'],
-                transactions=self.transactions
+                notfull=True
             )
             QMessageBox.information(self, "Printed", "Receipt sent to thermal printer.")
         except Exception as e:

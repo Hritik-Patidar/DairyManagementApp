@@ -2,6 +2,7 @@
 
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QTextEdit
 from database import db_manager
+from utils.hindi_type import get_hindi_type
 
 class ViewHistoryDialog(QDialog):
     def __init__(self, account_no, parent=None):
@@ -17,16 +18,8 @@ class ViewHistoryDialog(QDialog):
         content = ""
         for tx in history:
             date, t_type, product, amount, proof = tx
-            content += f"{date} - {self.get_hindi_type(t_type)} - {product or 'लेनदेन'} - ₹{amount} - {proof or ''}\n"
+            content += f"{date} - {get_hindi_type(t_type)} - {product or 'लेनदेन'} - ₹{amount} - {proof or ''}\n"
 
         self.text.setText(content or "No transactions found.")
         layout.addWidget(self.text)
         self.setLayout(layout)
-    def get_hindi_type(self, tx_type):
-        return {
-            "purchase": "खरीद",
-            "payment_give": "नकद दी गई राशि",
-            "payment_take": "नकद किसान द्वारा/बाकी",
-            "add_balance": "हफ़्ता",
-            "settled": "सेटल"
-        }.get(tx_type, tx_type)

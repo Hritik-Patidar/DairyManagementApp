@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QDate
 from database import db_manager
+from utils.hindi_type import get_hindi_type
 
 
 class AddTransactionDialog(QDialog):
@@ -59,15 +60,8 @@ class AddTransactionDialog(QDialog):
             # 📎 Proof field for other types
             form_layout.addRow("📎 प्रमाण / नोट:", self.proof_input)
 
-        hindi_type = {
-            "purchase": "खरीद",
-            "payment_give": "नकद दी गई राशि",
-            "payment_take": "नकद किसान द्वारा",
-            "add_balance": "हफ़्ता",
-            "settled": "खाता सेटल"
-        }.get(self.tx_type.lower(), self.tx_type.title())
 
-        self.submit_btn = QPushButton(f"{hindi_type} जोड़ें")
+        self.submit_btn = QPushButton(f"{get_hindi_type(self.tx_type)} जोड़ें")
         self.submit_btn.clicked.connect(self.submit)
 
         layout.addLayout(form_layout)
@@ -99,16 +93,10 @@ class AddTransactionDialog(QDialog):
             success = db_manager.add_transaction(
                 self.account_no, self.tx_type, amount, product, proof
             )
-            hindi_type = {
-                "purchase": "खरीद",
-                "payment_give": "नकद दी गई राशि",
-                "payment_take": "नकद किसान द्वारा",
-                "add_balance": "हफ़्ता",
-                "settled": "खाता सेटल"
-            }.get(self.tx_type.lower(), self.tx_type.title())
+
 
             if success:
-                QMessageBox.information(self, "✅ सफल", f"{hindi_type} सफलतापूर्वक जोड़ा गया।")
+                QMessageBox.information(self, "✅ सफल", f"{get_hindi_type(self.tx_type)} सफलतापूर्वक जोड़ा गया।")
                 self.accept()
             else:
                 QMessageBox.critical(self, "❌ त्रुटि", "लेन-देन असफल रहा। लॉग जांचें।")

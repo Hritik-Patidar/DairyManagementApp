@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox, QFrame
 )
 from PyQt5.QtCore import Qt, QTimer
-
+from ui.all_farmers_info import ShowAllFarmersWidget
 from ui.manage_account import ManageAccountWidget
 from ui.show_all_report import ShowAllReportWidget
 from utils.send_whatsapp_bill import send_bill_to_whatsapp
@@ -14,7 +14,7 @@ from ui.bill_print import BillPrintDialog
 from ui.view_history import ViewHistoryDialog
 from ui.add_account import AddAccountDialog
 from database import db_manager
-from utils.print_hindi_report import print_hindi_report
+from utils.hindi_type import get_hindi_type
 
 
 class MainWindow(QWidget):
@@ -79,6 +79,22 @@ class MainWindow(QWidget):
         tx_layout.addLayout(right_box)
         main_layout.addLayout(tx_layout)
 
+        # Recent Transactions Section
+        recent_label = QLabel("📅 हाल के लेन-देन:")
+        recent_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
+        self.recent_display = QTextEdit()
+        self.recent_display.setReadOnly(True)
+        self.recent_display.setMinimumHeight(190)
+        self.recent_display.setMaximumHeight(210)
+        self.recent_display.setStyleSheet("background-color: #f9f9f9;")
+        main_layout.addWidget(recent_label)
+        main_layout.addWidget(self.recent_display)
+
+
+
+
+
+
         main_layout.addWidget(self._separator())
 
         # Button Grid (same as before)
@@ -89,14 +105,14 @@ class MainWindow(QWidget):
             "👨‍🌾 किसान खाता प्रबंधन": self.manage_account,
             "🛒 खरीद जोड़ें": lambda: self.open_transaction("purchase"),
             "📥 हफ़्ता जोड़ें": lambda: self.open_transaction("add_balance"),
-            "💵 नकद दी गई राशि जोड़ें": lambda: self.open_transaction("payment_give"),
-            "💵 नकद किसान द्वारा जोड़ें/बाकी": lambda: self.open_transaction("payment_take"),
+            "💵 बाकी/नकद दी गई राशि जोड़ें": lambda: self.open_transaction("payment_give"),
+            "💵 देना/नकद किसान द्वारा जोड़ें": lambda: self.open_transaction("payment_take"),
             "✅ खाता सेटल करें": self.open_settle_account,
-            "📦 उत्पाद जोड़ें": self.open_add_product,
+            "📦 उत्पाद जोड़ें/हटाएं": self.open_add_product,
             "🖨️ बिल प्रिंट करें": self.open_small_bill,
             "📜 लेनदेन देखें": self.open_view_history,
-            "🗓️ दैनिक रिपोर्ट": self.generate_report,
-            "🗓️रिपोर्ट": self.show_all_report,
+            "💰  बैलेंस रिपोर्ट": self.all_farmer,
+            "🗓️ रिपोर्ट दिनाँक के आधार पर": self.show_all_report,
             "📤 व्हाट्सएप बिल भेजें": self.send_whatsapp_bill,
         }
 
@@ -108,7 +124,7 @@ class MainWindow(QWidget):
 
         main_layout.addLayout(button_grid)
         self.setLayout(main_layout)
-
+        self.recent_display.setText(self.recent_tnx() or "कोई हालिया लेनदेन नहीं मिला।")
     def _separator(self):
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
@@ -144,16 +160,10 @@ class MainWindow(QWidget):
             purchase_text = ""
             payment_text = ""
 
-            for date, t_type, product, amount, proof in transactions:
-                hindi_type = {
-                    "purchase": "खरीद",
-                    "payment_give": "नकद दी गई राशि",
-                    "payment_take": "नकद किसान द्वारा/बाकी",
-                    "add_balance": "हफ़्ता",
-                    "settled": "खाता सेटल"
-                }.get(t_type, t_type)
+            for date, t_type, product, proof, amount in transactions:
 
-                entry = f"[{date}] {hindi_type} - {product or 'लेनदेन'} -> ₹{amount} ({proof or ' '})\n"
+
+                entry = f"[{date[:16]}] | {get_hindi_type(t_type):<17} - {product or 'लेनदेन':<14} -> ₹{amount:<9} | ({proof or ' '})\n"
 
                 if t_type == "add_balance":
                     purchase_text += entry
@@ -170,8 +180,8 @@ class MainWindow(QWidget):
                     payment_text += entry
 
             self.purchase_display.setText(purchase_text or "कोई अन्य लेन-देन नहीं मिला।")
-            self.payment_display.setText(payment_text or "कोई खरीद नहीं मिली।")
-
+            self.payment_display.setText(payment_text or "कोई 💵 नकद /🛒 खरीद लेनदेन / सेटलमेंट: नहीं मिली।")
+            self.recent_display.setText(self.recent_tnx() or "कोई हालिया लेनदेन नहीं मिला।")
         except Exception as e:
             QMessageBox.critical(self, "त्रुटि", f"जानकारी प्राप्त करते समय त्रुटि हुई:\n{str(e)}")
 
@@ -218,12 +228,12 @@ class MainWindow(QWidget):
             dialog = ViewHistoryDialog(account_no=acc_no, parent=self)
             dialog.exec_()
 
-    def generate_report(self):
-        try:
-            print_hindi_report()
-            QMessageBox.information(self, "Success", "Daily report generated successfully.")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to generate report:\n{str(e)}")
+    # def generate_report(self):
+    #     try:
+    #         print_balance_report()
+    #         QMessageBox.information(self, "Success", "Daily report generated successfully.")
+    #     except Exception as e:
+    #         QMessageBox.critical(self, "Error", f"Failed to generate report:\n{str(e)}")
 
     def send_whatsapp_bill(self):
         acc_no = self.get_account_no()
@@ -254,3 +264,16 @@ class MainWindow(QWidget):
     def show_all_report(self):
         self.report_win = ShowAllReportWidget()
         self.report_win.show()
+
+    def all_farmer(self):
+        self.farmer_win = ShowAllFarmersWidget()
+        self.farmer_win.show()
+
+
+
+    def recent_tnx(self):
+        tnx = db_manager.get_last_transactions()
+        entry = ""
+        for account_no, date, type, product, proof, amount in tnx:
+            entry += f"AC No. {account_no:<6} | {get_hindi_type(type):<32} - {product or 'लेनदेन':<19} -> ₹{amount:<12} | ({proof or 'No Proof':<33}) [जोड़ने की दिनांक : {date[:16]}]\n"
+        return entry

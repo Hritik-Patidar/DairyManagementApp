@@ -7,6 +7,7 @@ from PyQt5.QtCore import QDate, Qt
 from PyQt5.QtGui import QFont
 from database import db_manager
 from utils.thermal_printer import print_report
+from utils.hindi_type import get_hindi_type
 
 class ShowAllReportWidget(QWidget):
     def __init__(self):
@@ -126,28 +127,23 @@ class ShowAllReportWidget(QWidget):
             tx_list = db_manager.get_filtered_transactions(acc_no, start, end)
             self.table.setRowCount(0)
 
-
-            for row, (date, tx_type, product, proof, amount) in enumerate(tx_list):
-                self.table.insertRow(row)
-                self.table.setItem(row, 0, QTableWidgetItem(date))
-                self.table.setItem(row, 1, QTableWidgetItem(self.get_hindi_type(tx_type)))
-                self.table.setItem(row, 2, QTableWidgetItem(product or "—"))
-                self.table.setItem(row, 3, QTableWidgetItem(proof or "—"))
-                self.table.setItem(row, 4, QTableWidgetItem(f"₹{amount:.2f}"))
+            if tx_list:
+                for row, (date, tx_type, product, proof, amount) in enumerate(tx_list):
+                    self.table.insertRow(row)
+                    self.table.setItem(row, 0, QTableWidgetItem(date))
+                    self.table.setItem(row, 1, QTableWidgetItem(get_hindi_type(tx_type)))
+                    self.table.setItem(row, 2, QTableWidgetItem(product or "—"))
+                    self.table.setItem(row, 3, QTableWidgetItem(proof or "—"))
+                    self.table.setItem(row, 4, QTableWidgetItem(f"₹{amount:.2f}"))
+            else:
+                QMessageBox.warning(self, "❌", "दिनांक विवरण नहीं मिला।")
 
         except Exception as e:
             import traceback
             print("❌ ERROR:", traceback.format_exc())
             QMessageBox.critical(self, "Crash", f"त्रुटि:\n{str(e)}")
 
-    def get_hindi_type(self, tx_type):
-        return {
-            "purchase": "खरीद",
-            "payment_give": "नकद दी गई राशि",
-            "payment_take": "नकद किसान द्वारा/बाकी",
-            "add_balance": "हफ़्ता",
-            "settled": "सेटल"
-        }.get(tx_type, tx_type)
+
 
     def print_report_in(self):
         try:
