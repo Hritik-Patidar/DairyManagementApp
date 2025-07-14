@@ -153,12 +153,15 @@ class MainWindow(QWidget):
 
             name = farmer[1]
             balance = farmer[3]
+            self.balance=balance
             self.name_label.setText(f"किसान का नाम: {name}")
             self.balance_label.setText(f"शेष राशि: ₹{balance:.2f}")
 
             transactions = db_manager.get_transactions(acc_no,limit=600)
             purchase_text = ""
             payment_text = ""
+            purchase_amount=0
+            payment_amount=0
 
             for date, t_type, product, proof, amount in transactions:
 
@@ -167,18 +170,23 @@ class MainWindow(QWidget):
 
                 if t_type == "add_balance":
                     purchase_text += entry
+                    purchase_amount+=amount
 
                 elif t_type=="purchase":
                     payment_text += entry
+                    payment_amount+=amount
 
                 elif t_type=="payment_take":
                     purchase_text += entry
+                    purchase_amount += amount
                 elif t_type=="settled":
                     payment_text += entry
                     break
                 else :
                     payment_text += entry
-
+                    payment_amount+=amount
+            purchase_text+=f"----------------------------------------------\n :-> योगफल :₹{purchase_amount} "
+            payment_text+=f"----------------------------------------------\n :-> योगफल :₹{payment_amount} "
             self.purchase_display.setText(purchase_text or "कोई अन्य लेन-देन नहीं मिला।")
             self.payment_display.setText(payment_text or "कोई 💵 नकद /🛒 खरीद लेनदेन / सेटलमेंट: नहीं मिली।")
             self.recent_display.setText(self.recent_tnx() or "कोई हालिया लेनदेन नहीं मिला।")
@@ -200,8 +208,9 @@ class MainWindow(QWidget):
 
     def open_settle_account(self):
         acc_no = self.get_account_no()
+        balance=self.balance
         if acc_no is not None:
-            dialog = SettleAccountDialog(account_no=acc_no, parent=self)
+            dialog = SettleAccountDialog(account_no=acc_no,balance=balance, parent=self)
             if dialog.exec_():
                 self.fetch_account_info()
 
@@ -223,11 +232,15 @@ class MainWindow(QWidget):
         #     QMessageBox.critical(self, "Error", f"Failed:\n{str(e)}")
 
     def open_view_history(self):
-        acc_no = self.get_account_no()
-        if acc_no is not None:
-            dialog = ViewHistoryDialog(account_no=acc_no, parent=self)
-            dialog.exec_()
-
+        try:
+            acc_no = self.get_account_no()
+            if acc_no is not None:
+                dialog = ViewHistoryDialog(account_no=acc_no, parent=self)
+                dialog.exec_()
+        except Exception as e:
+            import traceback
+            print("❌ ERROR:", traceback.format_exc())
+            QMessageBox.critical(self, "Crash", f"त्रुटि:\n{str(e)}")
     # def generate_report(self):
     #     try:
     #         print_balance_report()
@@ -272,7 +285,7 @@ class MainWindow(QWidget):
 
 
     def recent_tnx(self):
-        tnx = db_manager.get_last_transactions()
+        tnx = db_manager.get_last_transactions(limit=30)
         entry = ""
         for account_no, date, type, product, proof, amount in tnx:
             entry += f"AC No. {account_no:<6} | {get_hindi_type(type):<32} - {product or 'लेनदेन':<19} -> ₹{amount:<12} | ({proof or 'No Proof':<33}) [जोड़ने की दिनांक : {date[:16]}]\n"

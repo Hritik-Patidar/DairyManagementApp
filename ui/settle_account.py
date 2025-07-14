@@ -5,9 +5,10 @@ from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageB
 from database import db_manager
 
 class SettleAccountDialog(QDialog):
-    def __init__(self, account_no, parent=None):
+    def __init__(self, account_no,balance, parent=None):
         super().__init__(parent)
         self.account_no = account_no
+        self.balance=balance
         self.setWindowTitle("Settle Account")
         self.setFixedSize(300, 150)
 
@@ -28,9 +29,9 @@ class SettleAccountDialog(QDialog):
         db_manager.add_transaction(
             account_no=self.account_no,
             t_type="settled",
-            amount=0.0,
+            amount=self.balance,
             product_name="Settled",
-            proof="Marked as settled"
+            proof=f"Marked as settled And last balance is {self.balance}"
         )
         QMessageBox.information(self, "Settled", "Account marked as settled.")
         self.accept()

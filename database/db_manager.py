@@ -105,7 +105,7 @@ def add_transaction(account_no, t_type, amount, product_name=None, proof=None):
         elif t_type == "add_balance":
             cursor.execute("UPDATE farmers SET balance = balance + ? WHERE account_no = ?", (amount, account_no))
         elif t_type == "settled":
-            cursor.execute("UPDATE farmers SET balance = ? WHERE account_no = ?", (amount, account_no))
+            cursor.execute("UPDATE farmers SET balance = 0 WHERE account_no = ?", (account_no,))
         elif t_type =="payment_take":
             cursor.execute("UPDATE farmers SET balance = balance + ? WHERE account_no = ?", (amount, account_no))
         conn.commit()
@@ -187,15 +187,32 @@ def update_farmer(account_no, name, phone):
         return False
 
 
-def delete_farmer(account_no):
+def delete_farmer(account_no,with_tx=False):
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM farmers WHERE account_no = ?", (account_no,))
-        conn.commit()
-        deleted = cursor.rowcount
-        conn.close()
-        return deleted > 0
+        def delete_transaction_ac():
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM transactions WHERE account_no = ?", (account_no,))
+            conn.commit()
+            conn.close()
+        if with_tx:
+            delete_transaction_ac()
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM farmers WHERE account_no = ?", (account_no,))
+            conn.commit()
+            deleted = cursor.rowcount
+            conn.close()
+            return deleted > 0
+
+        else:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM farmers WHERE account_no = ?", (account_no,))
+            conn.commit()
+            deleted = cursor.rowcount
+            conn.close()
+            return deleted > 0
     except Exception as e:
         print("❌ Error in delete_farmer:", e)
         return False
@@ -263,3 +280,98 @@ def delete_product_by_id(product_id):
     except Exception as e:
         print("❌ Error deleting product by ID:", e)
         return False
+
+
+def delete_transaction(tx_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # 🔍 पहले transaction details लो ताकि balance reverse कर सको
+        cursor.execute("SELECT account_no, type, amount FROM transactions WHERE id = ?", (tx_id,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return False
+
+        account_no, tx_type, amount = row
+
+        # 🧮 Balance reverse करना based on type
+        if tx_type == "purchase" or tx_type == "payment_give":
+            cursor.execute("UPDATE farmers SET balance = balance + ? WHERE account_no = ?", (amount, account_no))
+        elif tx_type == "add_balance" or tx_type == "payment_take":
+            cursor.execute("UPDATE farmers SET balance = balance - ? WHERE account_no = ?", (amount, account_no))
+        elif tx_type == "settled":
+            # 'settled' को delete करने पर कुछ assumption लेना पड़ेगा, जैसे कि पुराने balance restore नहीं कर सकते
+            # You may choose to skip balance update or log this as warning
+            print("⚠️ Warning: Cannot reverse balance on 'settled' delete")
+
+        # 🔥 अब transaction delete करो
+        cursor.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print("❌ Error in delete_transaction:", e)
+        return False
+
+
+
+def get_transactions_with_id(account_no, limit=999):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, date, type, product_name, amount, proof FROM transactions WHERE account_no = ? ORDER BY date DESC LIMIT ?",
+        (account_no, limit)
+    )
+    result = cursor.fetchall()
+    conn.close()
+    return result
+
+
+def get_transaction_by_id(tx_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM transactions WHERE id = ?", (tx_id,))
+    result = cursor.fetchone()
+    conn.close()
+    return result
+
+
+def update_transaction(tx_id, product, new_amount, new_proof):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # 🧾 पुरानी transaction details लो
+        cursor.execute("SELECT account_no, amount, type FROM transactions WHERE id = ?", (tx_id,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return False
+
+        account_no, old_amount, tx_type = row
+        difference = new_amount - old_amount
+
+        # 🔁 अब balance adjust करो
+        if tx_type == "purchase" or tx_type == "payment_give":
+            cursor.execute("UPDATE farmers SET balance = balance - ? WHERE account_no = ?", (difference, account_no))
+        elif tx_type == "add_balance" or tx_type == "payment_take":
+            cursor.execute("UPDATE farmers SET balance = balance + ? WHERE account_no = ?", (difference, account_no))
+        elif tx_type == "settled":
+            # Settled में normally exact balance सेट होता है, तो update से अलग logic बनाना होगा
+            print("⚠️ Warning: Cannot edit 'settled' amount safely. Skipping balance update.")
+
+        # ✏️ अब transaction update करो
+        cursor.execute(
+            "UPDATE transactions SET product_name = ?, amount = ?, proof = ? WHERE id = ?",
+            (product, new_amount, new_proof, tx_id)
+        )
+
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print("❌ Error in update_transaction:", e)
+        return False
+

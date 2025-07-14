@@ -148,8 +148,19 @@ class ManageAccountWidget(QWidget):
 
         elif self.current_action == "delete":
             confirm = QMessageBox.question(self, "पुष्टि करें", f"क्या आप खाता {acc} हटाना चाहते हैं?",
+                                         QMessageBox.Yes | QMessageBox.No)
+
+            include_tx = QMessageBox.question(self, "पुष्टि करें", f"क्या आप खाता {acc} के लेनदेन भी हटाना चाहते हैं?",
                                            QMessageBox.Yes | QMessageBox.No)
-            if confirm == QMessageBox.Yes:
+
+            if include_tx == QMessageBox.Yes:
+                if db_manager.delete_farmer(acc,with_tx=True):
+                    QMessageBox.information(self, "✅ हटाया गया", f"खाता {acc} का लेनदेन भी हटा दिया गया।")
+                    self.clear_fields()
+                else:
+                    QMessageBox.critical(self, "❌ असफल", "हटाने में त्रुटि हुई।")
+
+            elif confirm == QMessageBox.Yes:
                 if db_manager.delete_farmer(acc):
                     QMessageBox.information(self, "✅ हटाया गया", f"खाता {acc} हटा दिया गया।")
                     self.clear_fields()
