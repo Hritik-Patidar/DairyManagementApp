@@ -22,9 +22,6 @@ def get_filtered_transactions(account_no, start_date, end_date):
     conn.close()
     return result
 
-
-
-
 def get_farmer_main(account_no):
     conn = get_connection()
     cursor = conn.cursor()
@@ -46,6 +43,7 @@ def get_transactions(account_no, limit=500):
     results = cursor.fetchall()
     conn.close()
     return results
+
 def get_all_transactions(limit):
     conn = get_connection()
     cursor = conn.cursor()
@@ -71,7 +69,7 @@ def get_all_products():
 
 def add_product(name, price):
     try:
-        conn = sqlite3.connect("data/dairy_management.db")
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("INSERT INTO products (name, price) VALUES (?, ?)", (name, price))
         conn.commit()
@@ -85,10 +83,10 @@ def add_product(name, price):
 # --- TRANSACTION FUNCTIONS ---
 
 def add_transaction(account_no, t_type, amount, product_name=None, proof=None):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
     try:
         from datetime import datetime
-        conn = sqlite3.connect("data/dairy_management.db")
-        cursor = conn.cursor()
 
         date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -97,7 +95,7 @@ def add_transaction(account_no, t_type, amount, product_name=None, proof=None):
             VALUES (?, ?, ?, ?, ?, ?)
         """, (account_no, date_str, t_type, product_name, amount, proof))
 
-        # ✅ Correct balance update logic
+
         if t_type == "purchase":
             cursor.execute("UPDATE farmers SET balance = balance - ? WHERE account_no = ?", (amount, account_no))
         elif t_type == "payment_give":
@@ -105,34 +103,39 @@ def add_transaction(account_no, t_type, amount, product_name=None, proof=None):
         elif t_type == "add_balance":
             cursor.execute("UPDATE farmers SET balance = balance + ? WHERE account_no = ?", (amount, account_no))
         elif t_type == "settled":
+            cursor.execute("UPDATE farmers SET previous_balance = balance WHERE account_no = ?", (account_no,))
             cursor.execute("UPDATE farmers SET balance = 0 WHERE account_no = ?", (account_no,))
         elif t_type =="payment_take":
             cursor.execute("UPDATE farmers SET balance = balance + ? WHERE account_no = ?", (amount, account_no))
         conn.commit()
-        conn.close()
 
         print(f"✅ Transaction added: {t_type} ₹{amount} to acc {account_no}")
         return True
     except Exception as e:
         print("❌ Error in add_transaction:", e)
+        conn.rollback()
         return False
+    finally:
+        conn.close()
 
 
-
-def add_farmer_manual(account_no, name, phone):
+def add_farmer_manual(account_no, name, phone,milk_type):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
     try:
-        conn = sqlite3.connect("data/dairy_management.db")
-        cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO farmers (account_no, name, phone, balance) VALUES (?, ?, ?, ?)",
-            (account_no, name, phone, 0.0)
+            "INSERT INTO farmers (account_no, name, phone, balance, milk_type) VALUES (?, ?, ?, ?,?)",
+            (account_no, name, phone, 0.0,milk_type)
         )
         conn.commit()
         conn.close()
         return True
     except Exception as e:
         print("❌ Error in add_farmer_manual:", e)
+        conn.rollback()
         return False
+    finally:
+        conn.close()
 
 def get_farmer(account_no):
     try:
@@ -146,7 +149,8 @@ def get_farmer(account_no):
                 "account_no": result[0],
                 "name": result[1],
                 "phone": result[2],
-                "balance": result[3]
+                "balance": result[3],
+                "milk_type":result[4]
             }
         return None
     except Exception as e:
@@ -171,9 +175,9 @@ def get_all_farmers():
 
 
 def update_farmer(account_no, name, phone):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
         cursor.execute(
             "UPDATE farmers SET name = ?, phone = ? WHERE account_no = ?",
             (name, phone, account_no)
@@ -184,7 +188,10 @@ def update_farmer(account_no, name, phone):
         return updated > 0
     except Exception as e:
         print("❌ Error in update_farmer:", e)
+        conn.rollback()
         return False
+    finally:
+        conn.close()
 
 
 def delete_farmer(account_no,with_tx=False):
@@ -216,7 +223,6 @@ def delete_farmer(account_no,with_tx=False):
     except Exception as e:
         print("❌ Error in delete_farmer:", e)
         return False
-
 
 
 def get_last_transactions(limit=15):
@@ -287,14 +293,18 @@ def delete_transaction(tx_id):
         conn = get_connection()
         cursor = conn.cursor()
 
-        # 🔍 पहले transaction details लो ताकि balance reverse कर सको
         cursor.execute("SELECT account_no, type, amount FROM transactions WHERE id = ?", (tx_id,))
+
+
         row = cursor.fetchone()
         if not row:
             conn.close()
             return False
 
         account_no, tx_type, amount = row
+        cursor.execute("SELECT balance, previous_balance FROM farmers WHERE account_no = ?", (account_no,))
+        frow=cursor.fetchone()
+        balance,previous_balance=frow
 
         # 🧮 Balance reverse करना based on type
         if tx_type == "purchase" or tx_type == "payment_give":
@@ -302,11 +312,8 @@ def delete_transaction(tx_id):
         elif tx_type == "add_balance" or tx_type == "payment_take":
             cursor.execute("UPDATE farmers SET balance = balance - ? WHERE account_no = ?", (amount, account_no))
         elif tx_type == "settled":
-            # 'settled' को delete करने पर कुछ assumption लेना पड़ेगा, जैसे कि पुराने balance restore नहीं कर सकते
-            # You may choose to skip balance update or log this as warning
-            print("⚠️ Warning: Cannot reverse balance on 'settled' delete")
+            cursor.execute("UPDATE farmers SET balance = balance + ? WHERE account_no = ?", (previous_balance, account_no))
 
-        # 🔥 अब transaction delete करो
         cursor.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
         conn.commit()
         conn.close()
@@ -314,7 +321,6 @@ def delete_transaction(tx_id):
     except Exception as e:
         print("❌ Error in delete_transaction:", e)
         return False
-
 
 
 def get_transactions_with_id(account_no, limit=999):
@@ -339,11 +345,10 @@ def get_transaction_by_id(tx_id):
 
 
 def update_transaction(tx_id, product, new_amount, new_proof):
+    conn = get_connection()
+    cursor = conn.cursor()
     try:
-        conn = get_connection()
-        cursor = conn.cursor()
 
-        # 🧾 पुरानी transaction details लो
         cursor.execute("SELECT account_no, amount, type FROM transactions WHERE id = ?", (tx_id,))
         row = cursor.fetchone()
         if not row:
@@ -353,7 +358,7 @@ def update_transaction(tx_id, product, new_amount, new_proof):
         account_no, old_amount, tx_type = row
         difference = new_amount - old_amount
 
-        # 🔁 अब balance adjust करो
+
         if tx_type == "purchase" or tx_type == "payment_give":
             cursor.execute("UPDATE farmers SET balance = balance - ? WHERE account_no = ?", (difference, account_no))
         elif tx_type == "add_balance" or tx_type == "payment_take":
@@ -361,17 +366,172 @@ def update_transaction(tx_id, product, new_amount, new_proof):
         elif tx_type == "settled":
             # Settled में normally exact balance सेट होता है, तो update से अलग logic बनाना होगा
             print("⚠️ Warning: Cannot edit 'settled' amount safely. Skipping balance update.")
+            return
 
-        # ✏️ अब transaction update करो
+
         cursor.execute(
             "UPDATE transactions SET product_name = ?, amount = ?, proof = ? WHERE id = ?",
             (product, new_amount, new_proof, tx_id)
         )
 
         conn.commit()
-        conn.close()
         return True
     except Exception as e:
         print("❌ Error in update_transaction:", e)
+        conn.rollback()
         return False
+    finally:
+        conn.close()
 
+
+def get_rate_by_fat_clr(fat, clr):
+    try:
+        conn = sqlite3.connect("data/dairy_management.db")
+        cur = conn.cursor()
+        cur.execute("SELECT Rate FROM FatCLRRate WHERE Fat=? AND CLR=?", (fat, clr))
+        row = cur.fetchone()
+        conn.close()
+        return row[0] if row else None
+    except Exception as e:
+        print(e)
+
+
+def update_or_insert_rate(fat, clr, rate):
+    conn = sqlite3.connect("data/dairy_management.db")
+    cur = conn.cursor()
+    cur.execute("INSERT OR REPLACE INTO FatCLRRate (Fat, CLR, Rate) VALUES (?, ?, ?)", (fat, clr, rate))
+    conn.commit()
+    conn.close()
+
+
+def make_entry(account_no, quantity, fat, clr, rate, total_amount, date, shift, milk_type):
+    conn = get_connection()
+
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA foreign_keys = ON;")
+
+    insert_query = """
+        INSERT INTO DailyEntry (
+            account_no, quantity, fat, clr, rate, total_amount, date, shift, milk_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+
+    try:
+        cursor.execute(insert_query, (account_no, quantity, fat, clr, rate, total_amount, date, shift, milk_type))
+        conn.commit()
+        print("✅ Data inserted successfully.")
+    except Exception as e:
+        print("❌ Error inserting data:", e)
+        conn.rollback()
+        return e
+    finally:
+        conn.close()
+
+
+def get_entries_by_date_shift(date_str, shift):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT id,account_no, date, shift, quantity, fat, clr, rate, total_amount, milk_type
+            FROM DailyEntry
+            WHERE date = ? AND shift = ?
+            ORDER BY account_no
+        """, (date_str, shift))
+        rows = cursor.fetchall()
+
+        return rows
+    except Exception as e:
+        print(e)
+    finally:
+        conn.close()
+
+def delete_entry(entry_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM DailyEntry WHERE id = ?", (entry_id,))
+    conn.commit()
+    conn.close()
+
+def calculate_hafta(from_date, to_date, account_no=None):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        query = """
+            SELECT account_no,
+                   ROUND(AVG(fat),1) AS avg_fat,
+                   ROUND(AVG(clr),1) AS avg_clr,
+                   ROUND(AVG(rate),2) AS avg_rate,
+                   ROUND(SUM(quantity),2) AS total_qty,
+                   SUM(total_amount) AS total_amount
+            FROM DailyEntry
+            WHERE is_settled = 0
+              AND date BETWEEN ? AND ?
+        """
+        params = [from_date, to_date]
+        if account_no:
+            query += " AND account_no = ?"
+            params.append(account_no)
+        query += " GROUP BY account_no"
+
+        cur.execute(query, params)
+        results = cur.fetchall()
+        print(results)
+        # Insert into hafta_summary
+        proof = f"{from_date} - {to_date}"
+        for acc,total_qty, fat, clr, rate, total in results:
+            cur.execute("""
+                INSERT INTO hafta_summary (account_no, from_date, to_date, total_amount)
+                VALUES (?, ?, ?, ?)
+            """, (acc, from_date, to_date, total))
+            print("date between",from_date,to_date)
+            cur.execute("""
+                UPDATE DailyEntry
+                SET is_settled = 1
+                WHERE account_no = ? AND date BETWEEN ? AND ?
+            """, (acc, from_date, to_date))
+        conn.commit()
+        conn.close()
+        for acc, total_qty, fat, clr, rate, total in results:
+            add_transaction(acc,"add_balance",total,"लेन-देन",proof)
+        return results
+    except Exception as e:
+        print(e)
+
+
+def fetch_hafta_summary(from_date, to_date, account_no=None):
+    conn = get_connection()
+    cur = conn.cursor()
+    query = """
+        SELECT account_no,
+               ROUND(AVG(fat),1) AS avg_fat,
+               ROUND(AVG(clr),1) AS avg_clr,
+               ROUND(AVG(rate),2) AS avg_rate,
+               ROUND(SUM(quantity),2) AS total_qty,
+               ROUND(SUM(total_amount),2) AS total_amount
+        FROM DailyEntry
+        WHERE date BETWEEN ? AND ?
+    """
+    params = [from_date, to_date]
+    if account_no:
+        query += " AND account_no = ?"
+        params.append(account_no)
+    query += " GROUP BY account_no"
+    cur.execute(query, params)
+    results = cur.fetchall()
+    conn.close()
+    return results
+
+def fetch_farmer_entries(account_no, from_date, to_date):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT date, shift, milk_type, fat, clr, rate, quantity, total_amount
+        FROM DailyEntry
+        WHERE account_no = ? AND date BETWEEN ? AND ?
+        ORDER BY date
+    """, (account_no, from_date, to_date))
+    data = cur.fetchall()
+    conn.close()
+    return data

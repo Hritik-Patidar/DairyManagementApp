@@ -20,10 +20,12 @@ class AddAccountDialog(QDialog):
         self.account_input = QLineEdit()
         self.name_input = QLineEdit()
         self.phone_input = QLineEdit()
+        self.milk_type=QLineEdit()
 
         self.account_input.setPlaceholderText("e.g. 101")
-        self.name_input.setPlaceholderText("Farmer name")
-        self.phone_input.setPlaceholderText("Phone number")
+        self.name_input.setPlaceholderText("किसान का नाम")
+        self.phone_input.setPlaceholderText("मोबाइल")
+        self.milk_type.setPlaceholderText("दूध का प्रकार")
 
         form_layout.addRow("Account Number (manual):", self.account_input)
         form_layout.addRow("Name:", self.name_input)

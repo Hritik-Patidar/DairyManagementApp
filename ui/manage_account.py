@@ -1,3 +1,4 @@
+from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QMessageBox
@@ -55,6 +56,12 @@ class ManageAccountWidget(QWidget):
         self.phone_input.setFont(font)
         layout.addWidget(self.create_label("फोन नंबर:", font))
         layout.addWidget(self.phone_input)
+        #type of milk
+        self.milk_type = QLineEdit()
+        self.milk_type.setPlaceholderText("दूध का प्रकार")
+        self.milk_type.setFont(font)
+        layout.addWidget(self.create_label("दूध का प्रकार", font))
+        layout.addWidget(self.milk_type)
 
         # --- Action Button ---
         self.action_btn = QPushButton("✅ कार्रवाई करें")
@@ -95,24 +102,32 @@ class ManageAccountWidget(QWidget):
 
     def autofill_fields(self):
         """Auto-fill name and phone from account number."""
-        acc = self.account_input.text().strip()
-        if not acc.isdigit():
-            self.name_input.clear()
-            self.phone_input.clear()
-            return
+        try:
+            acc = self.account_input.text().strip()
+            if not acc.isdigit():
+                self.name_input.clear()
+                self.phone_input.clear()
+                self.milk_type.clear()
+                return
 
-        farmer = db_manager.get_farmer(int(acc))
-        if farmer:
-            self.name_input.setText(farmer["name"])
-            self.phone_input.setText(farmer["phone"] or "")
-        else:
-            self.name_input.clear()
-            self.phone_input.clear()
+            farmer = db_manager.get_farmer(int(acc))
+            if farmer:
+                self.name_input.setText(farmer["name"])
+                self.phone_input.setText(farmer["phone"] or "")
+                self.milk_type.setText(farmer["milk_type"] or "")
+            else:
+                self.name_input.clear()
+                self.phone_input.clear()
+                self.milk_type.clear()
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save rates:\n{e}")
+
 
     def perform_action(self):
         acc = self.account_input.text().strip()
         name = self.name_input.text().strip()
         phone = self.phone_input.text().strip()
+        fmilk_type=self.milk_type.text().strip()
 
         if not acc.isdigit():
             QMessageBox.warning(self, "⚠️ त्रुटि", "कृपया सही खाता नंबर दर्ज करें।")
@@ -127,7 +142,7 @@ class ManageAccountWidget(QWidget):
             if db_manager.get_farmer(acc):
                 QMessageBox.warning(self, "⚠️ मौजूद है", f"खाता {acc} पहले से मौजूद है।")
                 return
-            if db_manager.add_farmer_manual(acc, name, phone):
+            if db_manager.add_farmer_manual(acc, name, phone,fmilk_type):
                 QMessageBox.information(self, "✅ सफल", f"खाता {acc} जोड़ दिया गया।")
                 self.clear_fields()
             else:

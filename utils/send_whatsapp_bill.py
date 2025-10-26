@@ -2,7 +2,7 @@ import sqlite3
 import socket
 from datetime import datetime, timedelta
 from database.db_manager import get_farmer_main
-DB_PATH = "data/dairy_management.db"
+DB_PATH = "../data/dairy_management.db"
 
 def is_connected():
     """Check if internet is available (non-crashing)"""
