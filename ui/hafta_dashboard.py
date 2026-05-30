@@ -11,8 +11,9 @@ from database.db_manager import calculate_hafta, fetch_hafta_summary
 class HaftaWidget(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("🐄 Dairy Hafta Calculation")
+        self.setWindowTitle("Dairy Hafta Calculation")
         self.setMinimumWidth(950)
+        self.showMaximized()
         self.setup_ui()
         self.apply_styles()
 
@@ -36,6 +37,29 @@ class HaftaWidget(QWidget):
         self.to_date = QDateEdit(calendarPopup=True)
         self.to_date.setDate(QDate.currentDate())
 
+
+        calendar1 = self.from_date.calendarWidget()
+        calendar2 = self.to_date.calendarWidget()
+
+        # Apply style to popup calendar text color
+        calendar_style = """
+                QCalendarWidget QAbstractItemView {
+                    color: white;            /* Text color */
+                    background-color: #2d2d2d; /* Background color */
+                    selection-background-color: #2d2d2d; /* Selected date background */
+                    selection-color: white;  /* Selected text color */
+                }
+                QCalendarWidget QWidget#qt_calendar_navigationbar {
+                    background-color: #444444;
+                }
+                QCalendarWidget QToolButton {
+                    color: white;
+                    background: transparent;
+                }
+                """
+
+        calendar1.setStyleSheet(calendar_style)
+        calendar2.setStyleSheet(calendar_style)
         # --- Buttons ---
         self.show_btn = QPushButton("📊 Show Hafta")
         self.calc_btn = QPushButton("💰 Calculate Now")
@@ -122,8 +146,8 @@ class HaftaWidget(QWidget):
     def get_inputs(self):
         acc_no = self.acc_input.text().strip()
         acc_no = int(acc_no) if acc_no else None
-        from_date = self.from_date.date().toString("dd-MM-yyyy")
-        to_date = self.to_date.date().toString("dd-MM-yyyy")
+        from_date = self.from_date.date().toString("yyyy-MM-dd")
+        to_date = self.to_date.date().toString("yyyy-MM-dd")
         return acc_no, from_date, to_date
 
     # ---------------- Events ---------------- #

@@ -1,16 +1,16 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt, QDate
-from PyQt5.QtWidgets import QMessageBox, QPushButton, QHeaderView
+from PyQt5.QtWidgets import QMessageBox, QPushButton
 from database import db_manager
 from database.db_manager import make_entry
-from utils.PrintDailyEntryRecpt import print_direct
+
 
 class DailyCollectionDashboard(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("🧾 Dairy Milk Collection Dashboard")
         self.showMaximized()
-        self.setStyleSheet("background-color: #f2f5f9; font-family: 'Segoe UI';")
+        self.setStyleSheet("background-color: #f3f6f9; font-family: 'Segoe UI';")
         self.setup_ui()
 
     def setup_ui(self):
@@ -21,30 +21,23 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
         # -------- HEADER --------
         header = QtWidgets.QLabel("🐄 दैनिक दूध संकलन (Daily Milk Collection)")
         header.setAlignment(Qt.AlignCenter)
-        header.setStyleSheet("""
-            font-size: 28px;
-            font-weight: bold;
-            color: #1b5e20;
-            background: #e8f5e9;
-            padding: 10px;
-            border-radius: 8px;
-        """)
+        header.setStyleSheet("font-size: 28px; font-weight: bold; color: #2e7d32;")
         main_layout.addWidget(header)
 
-        # -------- CONTENT --------
+        # -------- CONTENT (Form + Table) --------
         content_layout = QtWidgets.QHBoxLayout()
         content_layout.setSpacing(25)
-        content_layout.setStretch(0, 55)
-        content_layout.setStretch(1, 45)
+        content_layout.setStretch(0, 65)  # left form area
+        content_layout.setStretch(1, 35)  # right table area
 
         # -------- LEFT FORM PANEL --------
         form_box = QtWidgets.QFrame()
         form_box.setStyleSheet("""
             QFrame {
                 background: white;
-                border-radius: 6px;
+                border-radius: 16px;
                 border: 1px solid #ccc;
-                padding: 22px;
+                padding: 35px;
             }
             QLabel {
                 font-size: 17px;
@@ -62,8 +55,8 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
             }
         """)
         form_layout = QtWidgets.QGridLayout(form_box)
-        form_layout.setHorizontalSpacing(25)
-        form_layout.setVerticalSpacing(15)
+        form_layout.setHorizontalSpacing(30)
+        form_layout.setVerticalSpacing(18)
 
         style_box = "min-height:36px; font-size:17px;"
 
@@ -72,25 +65,6 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
         self.date.setCalendarPopup(True)
         self.date.setDate(QDate.currentDate())
         self.date.setStyleSheet(style_box)
-        calendar = self.date.calendarWidget()
-        # Apply style to popup calendar text color
-        calendar_style = """
-                QCalendarWidget QAbstractItemView {
-                    color: white;            /* Text color */
-                    background-color: #2d2d2d; /* Background color */
-                    selection-background-color: #2d2d2d; /* Selected date background */
-                    selection-color: white;  /* Selected text color */
-                }
-                QCalendarWidget QWidget#qt_calendar_navigationbar {
-                    background-color: #444444;
-                }
-                QCalendarWidget QToolButton {
-                    color: white;
-                    background: transparent;
-                }
-                """
-
-        calendar.setStyleSheet(calendar_style)
 
         self.shift = QtWidgets.QComboBox()
         self.shift.addItems(["Morning", "Evening"])
@@ -98,13 +72,16 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
 
         self.account_no = QtWidgets.QLineEdit(); self.account_no.setPlaceholderText("Account No")
         self.name = QtWidgets.QLineEdit(); self.name.setReadOnly(True)
-        self.hindiname = QtWidgets.QLineEdit(); self.hindiname.setReadOnly(True)
         self.qty = QtWidgets.QLineEdit(); self.qty.setPlaceholderText("Litres")
         self.fat = QtWidgets.QLineEdit(); self.fat.setPlaceholderText("Fat %")
         self.clr = QtWidgets.QLineEdit(); self.clr.setPlaceholderText("CLR")
         self.rate = QtWidgets.QLineEdit(); self.rate.setReadOnly(True)
         self.total = QtWidgets.QLineEdit(); self.total.setReadOnly(True)
         self.type = QtWidgets.QComboBox(); self.type.addItems(["Cow", "Buffalo"])
+
+        for field in [self.account_no, self.name, self.qty, self.fat, self.clr, self.rate, self.total]:
+            field.setStyleSheet(style_box)
+        self.type.setStyleSheet(style_box)
 
         # --- Layout (2 columns) ---
         row = 0
@@ -117,7 +94,6 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
                 form_layout.addWidget(widget2, row, 3)
             row += 1
 
-        add_row("Name:", self.hindiname)
         add_row("Date:", self.date, "Shift:", self.shift)
         add_row("Account No:", self.account_no, "Name:", self.name)
         add_row("Quantity (L):", self.qty, "Fat %:", self.fat)
@@ -143,65 +119,26 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
         # -------- RIGHT TABLE PANEL --------
         table_box = QtWidgets.QFrame()
         table_box.setStyleSheet("""
-            QFrame {
-                background: white;
-                border-radius: 16px;
-                border: 1px solid #ccc;
-                padding: 10px;
-            }
-            QLabel {
-                font-size: 20px;
-                font-weight: bold;
-                color: #1565c0;
-            }
+            QFrame { background: white; border-radius: 16px; border:1px solid #ccc; padding: 20px; }
+            QLabel { font-size:18px; font-weight:bold; color:#1e88e5; }
+            QHeaderView::section { background:#f0f0f0; padding:8px; border: none; }
         """)
-
         table_layout = QtWidgets.QVBoxLayout(table_box)
-        table_layout.setSpacing(5)
-        table_layout.setContentsMargins(15, 10, 15, 10)
+        table_layout.setSpacing(10)
 
-        lbl = QtWidgets.QLabel("📊 Records for Selected Date & Shift")
+        lbl = QtWidgets.QLabel("📊 Today’s Records")
         lbl.setAlignment(Qt.AlignCenter)
-        lbl.setStyleSheet("""
-            background: #e3f2fd;
-            border-radius: 8px;
-            padding: 8px;
-            font-size: 19px;
-            font-weight: 600;
-        """)
         table_layout.addWidget(lbl)
-        self.table = QtWidgets.QTableWidget(0, 10)
-        self.table.setHorizontalHeaderLabels([
-            "Account No", "Date", "Shift", "Qty (L)", "Fat", "CLR",
-            "Rate ₹/L", "Total ₹", "Type", "Action"
-        ])
-        self.table.setAlternatingRowColors(True)
-        self.table.setStyleSheet("""
-            QTableWidget {
-                background: #ffffff;
-                font-size: 16px;
-                gridline-color: #ccc;
-                border: none;
-            }
-            QHeaderView::section {
-                background-color: #1976d2;
-                color: white;
-                font-size: 16px;
-                font-weight: bold;
-                border: none;
-                padding: 8px;
-                height:60px;
-            }
-            QTableWidget::item {
-                padding: 6px;
-            }
-        """)
-        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+
+        self.table = QtWidgets.QTableWidget(0, 8)
+        self.table.setHorizontalHeaderLabels(["Date", "Shift", "Qty", "Fat", "CLR", "Rate", "Total ₹", "Type"])
+        self.table.horizontalHeader().setStretchLastSection(True)
         self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setVisible(True)
+        self.table.setStyleSheet("font-size:15px; background:#fafafa; gridline-color:#ddd;")
+        self.table.setAlternatingRowColors(True)
         table_layout.addWidget(self.table)
 
-        # -------- Combine Panels --------
+        # -------- Combine panels --------
         content_layout.addWidget(form_box)
         content_layout.addWidget(table_box)
         main_layout.addLayout(content_layout)
@@ -237,28 +174,23 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
         self.fat.textChanged.connect(self.calculate_rate)
         self.clr.textChanged.connect(self.calculate_rate)
         self.submit_btn.clicked.connect(self.submit_data)
-        self.date.dateChanged.connect(self.load_previous_records)
-        self.shift.currentIndexChanged.connect(self.load_previous_records)
 
+        # ---------- Focus & Shortcuts ----------
         self.account_no.returnPressed.connect(lambda: self.qty.setFocus())
         self.qty.returnPressed.connect(lambda: self.fat.setFocus())
         self.fat.returnPressed.connect(lambda: self.clr.setFocus())
         self.clr.returnPressed.connect(self.submit_data)
-        # initial load
-        self.load_previous_records()
 
     # ---------------- LOGIC ----------------
     def fetch_name(self):
         try:
             acc = self.account_no.text().strip()
-            if not acc.isdigit():
+            if not acc or not acc.isdigit():
                 self.name.clear()
-                self.hindiname.clear()
                 return
             data = db_manager.get_farmer_main(int(acc))
             if data:
                 self.name.setText(data[1])
-                self.hindiname.setText(data[6])
                 milk_type = data[4]
                 if milk_type == "C":
                     self.type.setCurrentText("Cow")
@@ -304,14 +236,11 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
         shift = "M" if self.shift.currentText() == "Morning" else "E"
         milk_type = "C" if self.type.currentText() == "Cow" else "B"
 
-        try:
-            account_no = int(self.account_no.text())
-        except:
-            QMessageBox.warning(self, "Invalid", "Enter valid Account Number.")
-            return
-
+        # Database में save करें (मान लें account_no fix है या कोई input field है)
+        account_no = int(self.account_no.text())  # अगर UI में field है
         result = make_entry(account_no, qty, float(self.fat.text()), int(self.clr.text()),
-                            rate, total, date_str, shift, milk_type)
+                  rate, total, date_str, shift, milk_type)
+        # check result
         if isinstance(result, Exception):
             if "UNIQUE constraint failed" in str(result):
                 QMessageBox.warning(self, "Duplicate Entry ⚠️",
@@ -319,62 +248,30 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
             else:
                 QMessageBox.critical(self, "Database Error", f"Error inserting data:\n{result}")
             return
-        print_text=f"Date-{date_str}-{shift}\nAC-{account_no}-{self.name.text()}\nLTR - {qty}\nFAT - {self.fat.text()}{milk_type}\nCLR - {self.clr.text()}"
 
-        print_text+=f"\nRATE - {rate}\nTOTAL -{total}"
+        # Table widget
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        values = [
+            date_str, shift, self.qty.text(), self.fat.text(), self.clr.text(),
+            self.rate.text(), self.total.text(), self.type.currentText()
+        ]
+        for col, val in enumerate(values):
+            self.table.setItem(row, col, QtWidgets.QTableWidgetItem(val))
 
-        print_direct(print_text)
+
+        total_l = sum(float(self.table.item(i, 2).text()) for i in range(self.table.rowCount()))
+        total_a = sum(float(self.table.item(i, 6).text()) for i in range(self.table.rowCount()))
+        self.total_litre.setText(f"{total_l:.2f}")
+        self.total_amount.setText(f"{total_a:.2f}")
+        self.avg_rate.setText(f"{(total_a / total_l):.2f}" if total_l else "0.00")
+
+        # Fields clear
+        for field in [self.qty, self.fat, self.clr, self.rate, self.total]:
+            field.clear()
+        self.qty.setFocus()
 
         QMessageBox.information(self, "Saved ✅", "Entry added successfully!")
-        self.load_previous_records()
-
-        for field in [self.account_no,self.name,self.qty, self.fat, self.clr, self.rate, self.total]:
-            field.clear()
-        self.account_no.setFocus()
-
-    def load_previous_records(self):
-        try:
-            date_str = self.date.date().toString("yyyy-MM-dd")
-            shift = "M" if self.shift.currentText() == "Morning" else "E"
-            records = db_manager.get_entries_by_date_shift(date_str, shift)
-            self.table.setRowCount(0)
-
-            from functools import partial
-
-            for row_data in records:
-                entry_id = row_data[0]
-                row = self.table.rowCount()
-                self.table.insertRow(row)
-                for col, val in enumerate(row_data[1:]):
-                    self.table.setItem(row, col, QtWidgets.QTableWidgetItem(str(val)))
-
-                del_btn = QtWidgets.QPushButton("🗑 Delete")
-                del_btn.setCursor(Qt.PointingHandCursor)
-                del_btn.setStyleSheet("color:white; background:#e53935; border-radius:6px; padding:4px 10px;")
-                del_btn.clicked.connect(partial(self.delete_record, entry_id))
-                self.table.setCellWidget(row, 9, del_btn)
-
-            if records:
-                total_l = sum(float(r[4]) for r in records)
-                total_a = sum(float(r[8]) for r in records)
-                self.total_litre.setText(f"{total_l:.2f}")
-                self.total_amount.setText(f"{total_a:.2f}")
-                self.avg_rate.setText(f"{(total_a / total_l):.2f}" if total_l else "0.00")
-            else:
-                self.total_litre.setText("0.00")
-                self.total_amount.setText("0.00")
-                self.avg_rate.setText("0.00")
-        except Exception as e:
-            print(e)
-
-    def delete_record(self, entry_id):
-        confirm = QMessageBox.question(self, "Confirm Delete",
-                                       "Are you sure you want to delete this record?",
-                                       QMessageBox.Yes | QMessageBox.No)
-        if confirm == QMessageBox.Yes:
-            db_manager.delete_entry(entry_id)
-            QMessageBox.information(self, "Deleted ✅", "Record deleted successfully.")
-            self.load_previous_records()
 
 
 # ---------- Run ----------

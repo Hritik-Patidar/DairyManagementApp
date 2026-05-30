@@ -27,12 +27,11 @@ class AddProductDialog(QDialog):
 
         layout.addLayout(form_layout)
 
-        # ➖ Product remove section
+
         self.remove_label = QLabel("🗑️ हटाने के लिए उत्पाद चुनें:")
         self.product_dropdown = QComboBox()
         self.load_products()  # Dropdown fill
 
-        # ➕/🗑️ Buttons
         btn_layout = QHBoxLayout()
         self.submit_btn = QPushButton("➕ उत्पाद जोड़ें")
         self.remove_btn = QPushButton("🗑️ उत्पाद हटाएं")

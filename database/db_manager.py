@@ -2,12 +2,11 @@ import sqlite3
 from pathlib import Path
 
 DB_PATH = Path("data/dairy_management.db")
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)  # Ensure 'data/' exists
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 def get_connection():
     return sqlite3.connect(DB_PATH)
 
-# --- FARMER FUNCTIONS ---
 def get_filtered_transactions(account_no, start_date, end_date):
     conn = get_connection()
     cursor = conn.cursor()
@@ -57,8 +56,6 @@ def get_all_transactions(limit):
     conn.close()
     return results
 
-# --- PRODUCT FUNCTIONS ---
-
 def get_all_products():
     conn = get_connection()
     cursor = conn.cursor()
@@ -74,13 +71,12 @@ def add_product(name, price):
         cursor.execute("INSERT INTO products (name, price) VALUES (?, ?)", (name, price))
         conn.commit()
         conn.close()
-        print(f"✅ Product added: {name} ₹{price}")
+        print(f" Product added: {name} ₹{price}")
         return True
     except Exception as e:
-        print("❌ Error in add_product:", e)
+        print(" Error in add_product:", e)
         return False
 
-# --- TRANSACTION FUNCTIONS ---
 
 def add_transaction(account_no, t_type, amount, product_name=None, proof=None):
     conn = sqlite3.connect(DB_PATH)
@@ -119,13 +115,13 @@ def add_transaction(account_no, t_type, amount, product_name=None, proof=None):
         conn.close()
 
 
-def add_farmer_manual(account_no, name, phone,milk_type):
+def add_farmer_manual(account_no, name, phone,milk_type,HindiName=None):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO farmers (account_no, name, phone, balance, milk_type) VALUES (?, ?, ?, ?,?)",
-            (account_no, name, phone, 0.0,milk_type)
+            "INSERT INTO farmers (account_no, name, phone, balance, milk_type,HindiName) VALUES (?, ?, ?, ?,?,?)",
+            (account_no, name, phone, 0.0,milk_type,HindiName)
         )
         conn.commit()
         conn.close()
@@ -150,13 +146,13 @@ def get_farmer(account_no):
                 "name": result[1],
                 "phone": result[2],
                 "balance": result[3],
-                "milk_type":result[4]
+                "milk_type":result[4],
+                "hindiname":result[5]
             }
         return None
     except Exception as e:
         print("❌ Error in get_farmer:", e)
         return None
-
 
 def get_all_farmers():
     try:
@@ -173,14 +169,13 @@ def get_all_farmers():
         print("❌ Error in get_all_farmers:", e)
         return []
 
-
-def update_farmer(account_no, name, phone):
+def update_farmer(account_no, name, phone,hindiname):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "UPDATE farmers SET name = ?, phone = ? WHERE account_no = ?",
-            (name, phone, account_no)
+            "UPDATE farmers SET name = ?, phone = ?, HindiName = ? WHERE account_no = ?",
+            (name, phone,hindiname,account_no)
         )
         conn.commit()
         updated = cursor.rowcount
@@ -192,7 +187,6 @@ def update_farmer(account_no, name, phone):
         return False
     finally:
         conn.close()
-
 
 def delete_farmer(account_no,with_tx=False):
     try:
@@ -224,7 +218,6 @@ def delete_farmer(account_no,with_tx=False):
         print("❌ Error in delete_farmer:", e)
         return False
 
-
 def get_last_transactions(limit=15):
     """
     Get the latest N transactions for a given account number.
@@ -245,7 +238,6 @@ def get_last_transactions(limit=15):
     except Exception as e:
         print("❌ Error fetching recent transactions:", e)
         return []
-
 
 def delete_product(name):
     """
@@ -274,6 +266,7 @@ def get_all_products_with_id():
     results = cursor.fetchall()
     conn.close()
     return results
+
 def delete_product_by_id(product_id):
     try:
         conn = get_connection()
@@ -321,7 +314,6 @@ def delete_transaction(tx_id):
     except Exception as e:
         print("❌ Error in delete_transaction:", e)
         return False
-
 
 def get_transactions_with_id(account_no, limit=999):
     conn = get_connection()

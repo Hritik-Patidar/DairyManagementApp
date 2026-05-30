@@ -27,7 +27,7 @@ class ShowAllFarmersWidget(QWidget):
             main_layout.setSpacing(20)
 
             # Title
-            title_label = QLabel("📋 सभी किसानों की रिपोर्ट")
+            title_label = QLabel("सभी किसानों की रिपोर्ट")
             title_label.setFont(QFont("Segoe UI", 16, QFont.Bold))
             title_label.setAlignment(Qt.AlignCenter)
             main_layout.addWidget(title_label)
@@ -78,10 +78,10 @@ class ShowAllFarmersWidget(QWidget):
                 QMessageBox.information(self, "कोई डेटा नहीं", "कोई किसान नहीं मिला।")
                 return
 
-            for row, (account_no, name, phone, balance,milk_type,_) in enumerate(farmers):
+            for row, (account_no, name, phone, balance,milk_type,_,hindiname) in enumerate(farmers):
                 self.table.insertRow(row)
                 self.table.setItem(row, 0, QTableWidgetItem(str(account_no)))
-                self.table.setItem(row, 1, QTableWidgetItem(name))
+                self.table.setItem(row, 1, QTableWidgetItem(hindiname))
                 self.table.setItem(row, 2, QTableWidgetItem(phone))
                 self.table.setItem(row, 3, QTableWidgetItem(f"₹{balance}"))
                 self.table.setItem(row, 4, QTableWidgetItem(milk_type))

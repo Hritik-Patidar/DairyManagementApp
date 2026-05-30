@@ -62,9 +62,31 @@ class ShowAllFarmersReportWidget(QWidget):
         self.to_date.setCalendarPopup(True)
         self.to_date.setStyleSheet(date_edit_style)
 
+        calendar1 = self.from_date.calendarWidget()
+        calendar2 = self.to_date.calendarWidget()
+
+        # Apply style to popup calendar text color
+        calendar_style = """
+                QCalendarWidget QAbstractItemView {
+                    color: white;            /* Text color */
+                    background-color: #2d2d2d; /* Background color */
+                    selection-background-color: #2d2d2d; /* Selected date background */
+                    selection-color: white;  /* Selected text color */
+                }
+                QCalendarWidget QWidget#qt_calendar_navigationbar {
+                    background-color: #444444;
+                }
+                QCalendarWidget QToolButton {
+                    color: white;
+                    background: transparent;
+                }
+                """
+
+        calendar1.setStyleSheet(calendar_style)
+        calendar2.setStyleSheet(calendar_style)
         # Buttons
-        self.load_button = QPushButton("🔄 Load Report")
-        self.print_btn = QPushButton("🖨️ Print Report")
+        self.load_button = QPushButton("रिपोर्ट लोड करें")
+        self.print_btn = QPushButton("रिपोर्ट प्रिंट करें")
 
         btn_green = """
             QPushButton {
@@ -136,11 +158,12 @@ class ShowAllFarmersReportWidget(QWidget):
         self.load_button.clicked.connect(self.load_report)
         self.print_btn.clicked.connect(self.print_report)
 
+
     # ---------- Load Report ----------
     def load_report(self):
         try:
-            from_date = self.from_date.date().toString("dd-MM-yyyy")
-            to_date = self.to_date.date().toString("dd-MM-yyyy")
+            from_date = self.from_date.date().toString("yyyy-MM-dd")
+            to_date = self.to_date.date().toString("yyyy-MM-dd")
 
             conn = sqlite3.connect(db_manager.DB_PATH)
             cursor = conn.cursor()

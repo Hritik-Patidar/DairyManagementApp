@@ -1,5 +1,3 @@
-# ui/add_account.py
-
 from PyQt5.QtWidgets import (
     QDialog, QFormLayout, QVBoxLayout, QLineEdit,
     QPushButton, QMessageBox
@@ -19,16 +17,19 @@ class AddAccountDialog(QDialog):
 
         self.account_input = QLineEdit()
         self.name_input = QLineEdit()
+        self.hindiname_input=QLineEdit()
         self.phone_input = QLineEdit()
         self.milk_type=QLineEdit()
 
         self.account_input.setPlaceholderText("e.g. 101")
-        self.name_input.setPlaceholderText("किसान का नाम")
+        self.name_input.setPlaceholderText("किसान का नाम अंग्रेजी में")
+        self.hindiname_input.setPlaceholderText("किसान का नाम हिंदी में")
         self.phone_input.setPlaceholderText("मोबाइल")
         self.milk_type.setPlaceholderText("दूध का प्रकार")
 
         form_layout.addRow("Account Number (manual):", self.account_input)
         form_layout.addRow("Name:", self.name_input)
+        form_layout.addRow("Name hindi:", self.hindiname_input)
         form_layout.addRow("Phone:", self.phone_input)
 
         self.submit_btn = QPushButton("Create Account")
@@ -41,6 +42,7 @@ class AddAccountDialog(QDialog):
     def create_account(self):
         acc_no = self.account_input.text().strip()
         name = self.name_input.text().strip()
+        hindiname = self.name_input.text().strip()
         phone = self.phone_input.text().strip()
 
         if not acc_no.isdigit() or not name:
@@ -53,7 +55,7 @@ class AddAccountDialog(QDialog):
             QMessageBox.warning(self, "Exists", f"Account No {acc_no} already exists.")
             return
 
-        success = db_manager.add_farmer_manual(acc_no, name, phone)
+        success = db_manager.add_farmer_manual(acc_no, name, phone,hindiname)
 
         if success:
             QMessageBox.information(self, "Success", f"Account No {acc_no} created successfully.")

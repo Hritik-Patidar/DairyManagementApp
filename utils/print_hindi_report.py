@@ -5,7 +5,7 @@ import win32print
 import win32ui
 from datetime import datetime
 
-DB_PATH = "../data/dairy_management.db"
+DB_PATH = "./data/dairy_management.db"
 
 def print_balance_report():
     try:

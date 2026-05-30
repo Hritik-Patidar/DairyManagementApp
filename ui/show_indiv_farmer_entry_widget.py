@@ -16,7 +16,8 @@ class FarmerEntryWidget(QWidget):
         super().__init__()
         self.setWindowTitle("🐄 Farmer Daily Entries")
         self.setMinimumWidth(900)
-        self.showFullScreen()
+        # self.showFullScreen()
+        self.showMaximized()
         self.setup_ui()
         self.apply_styles()
 
@@ -39,6 +40,31 @@ class FarmerEntryWidget(QWidget):
         self.to_label = QLabel("To Date:")
         self.to_date = QDateEdit(calendarPopup=True)
         self.to_date.setDate(QDate.currentDate())
+
+        calendar1 = self.from_date.calendarWidget()
+        calendar2 = self.to_date.calendarWidget()
+
+        # Apply style to popup calendar text color
+        calendar_style = """
+        QCalendarWidget QAbstractItemView {
+            color: white;            /* Text color */
+            background-color: #2d2d2d; /* Background color */
+            selection-background-color: #2d2d2d; /* Selected date background */
+            selection-color: white;  /* Selected text color */
+        }
+        QCalendarWidget QWidget#qt_calendar_navigationbar {
+            background-color: #444444;
+        }
+        QCalendarWidget QToolButton {
+            color: white;
+            background: transparent;
+        }
+        """
+
+        calendar1.setStyleSheet(calendar_style)
+        calendar2.setStyleSheet(calendar_style)
+
+
 
         # --- Buttons ---
         self.show_btn = QPushButton("📋 Show Entries")
@@ -89,6 +115,8 @@ class FarmerEntryWidget(QWidget):
         self.show_btn.clicked.connect(self.on_show_entries)
         self.print_btn.clicked.connect(self.on_print_receipt)
         self.back_btn.clicked.connect(self.close)
+        self.acc_input.returnPressed.connect(self.on_show_entries)
+
 
     # ---------------- STYLES ---------------- #
     def apply_styles(self):
@@ -144,8 +172,8 @@ class FarmerEntryWidget(QWidget):
         if not acc_no:
             QMessageBox.warning(self, "⚠️ Missing Input", "कृपया अकाउंट नंबर दर्ज करें।")
             return None, None, None
-        from_date = self.from_date.date().toString("dd-MM-yyyy")
-        to_date = self.to_date.date().toString("dd-MM-yyyy")
+        from_date = self.from_date.date().toString("yyyy-MM-dd")
+        to_date = self.to_date.date().toString("yyyy-MM-dd")
         return int(acc_no), from_date, to_date
 
     # ---------------- FETCH & POPULATE ---------------- #

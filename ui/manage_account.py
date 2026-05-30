@@ -45,10 +45,16 @@ class ManageAccountWidget(QWidget):
 
         # --- Name Input ---
         self.name_input = QLineEdit()
-        self.name_input.setPlaceholderText("किसान का नाम")
+        self.name_input.setPlaceholderText("किसान का नाम अंग्रेजी में")
         self.name_input.setFont(font)
         layout.addWidget(self.create_label("नाम:", font))
         layout.addWidget(self.name_input)
+
+        self.hindiname_input = QLineEdit()
+        self.hindiname_input.setPlaceholderText("किसान का नाम हिंदी में")
+        self.hindiname_input.setFont(font)
+        layout.addWidget(self.create_label("नाम हिंदी में:", font))
+        layout.addWidget(self.hindiname_input)
 
         # --- Phone Input ---
         self.phone_input = QLineEdit()
@@ -106,6 +112,7 @@ class ManageAccountWidget(QWidget):
             acc = self.account_input.text().strip()
             if not acc.isdigit():
                 self.name_input.clear()
+                self.hindiname_input.clear()
                 self.phone_input.clear()
                 self.milk_type.clear()
                 return
@@ -115,8 +122,10 @@ class ManageAccountWidget(QWidget):
                 self.name_input.setText(farmer["name"])
                 self.phone_input.setText(farmer["phone"] or "")
                 self.milk_type.setText(farmer["milk_type"] or "")
+                self.hindiname_input.setText(farmer["hindiname"] or "")
             else:
                 self.name_input.clear()
+                self.hindiname_input.clear()
                 self.phone_input.clear()
                 self.milk_type.clear()
         except Exception as e:
@@ -126,6 +135,7 @@ class ManageAccountWidget(QWidget):
     def perform_action(self):
         acc = self.account_input.text().strip()
         name = self.name_input.text().strip()
+        hindiname = self.hindiname_input.text().strip()
         phone = self.phone_input.text().strip()
         fmilk_type=self.milk_type.text().strip()
 
@@ -142,7 +152,7 @@ class ManageAccountWidget(QWidget):
             if db_manager.get_farmer(acc):
                 QMessageBox.warning(self, "⚠️ मौजूद है", f"खाता {acc} पहले से मौजूद है।")
                 return
-            if db_manager.add_farmer_manual(acc, name, phone,fmilk_type):
+            if db_manager.add_farmer_manual(acc, name, phone,fmilk_type,hindiname):
                 QMessageBox.information(self, "✅ सफल", f"खाता {acc} जोड़ दिया गया।")
                 self.clear_fields()
             else:
@@ -155,7 +165,7 @@ class ManageAccountWidget(QWidget):
             if not db_manager.get_farmer(acc):
                 QMessageBox.warning(self, "🔍 नहीं मिला", f"खाता {acc} मौजूद नहीं है।")
                 return
-            if db_manager.update_farmer(acc, name, phone):
+            if db_manager.update_farmer(acc, name, phone,hindiname):
                 QMessageBox.information(self, "✅ अपडेट", f"खाता {acc} अपडेट कर दिया गया।")
                 self.clear_fields()
             else:

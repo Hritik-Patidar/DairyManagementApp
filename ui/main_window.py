@@ -245,9 +245,10 @@ class MainWindow(QMainWindow):
                 return
 
             name = farmer[1]
+            hindiname=farmer[6]
             balance = farmer[3]
             self.balance = balance
-            self.name_label.setText(f"किसान का नाम: {name}")
+            self.name_label.setText(f"किसान का नाम: {name} | {hindiname}")
             self.balance_label.setText(f"शेष राशि: ₹{balance:.2f}")
 
             transactions = db_manager.get_transactions(acc_no, limit=600)
@@ -277,7 +278,7 @@ class MainWindow(QMainWindow):
             purchase_text += f"----------------------------------------------\n :-> योगफल :₹{purchase_amount} "
             payment_text += f"----------------------------------------------\n :-> योगफल :₹{payment_amount} "
             self.purchase_display.setText(purchase_text or "कोई अन्य लेन-देन नहीं मिला।")
-            self.payment_display.setText(payment_text or "कोई 💵 नकद /🛒 खरीद लेनदेन / सेटलमेंट: नहीं मिली।")
+            self.payment_display.setText(payment_text or "कोई  नकद /🛒 खरीद लेनदेन / सेटलमेंट: नहीं मिली।")
             self.recent_display.setText(self.recent_tnx() or "कोई हालिया लेनदेन नहीं मिला।")
         except Exception as e:
             QMessageBox.critical(self, "त्रुटि", f"जानकारी प्राप्त करते समय त्रुटि हुई:\n{str(e)}")
@@ -356,9 +357,9 @@ class MainWindow(QMainWindow):
             return
         try:
             send_bill_to_whatsapp(acc_no, phone)
-            QMessageBox.information(self, "✅ Success", f"{phone} पर बिल भेज दिया गया।")
+            QMessageBox.information(self, " Success", f"{phone} पर बिल भेज दिया गया।")
         except Exception as e:
-            QMessageBox.critical(self, "❌ Error", f"बिल भेजने में विफल:\n{str(e)}")
+            QMessageBox.critical(self, " Error", f"बिल भेजने में विफल:\n{str(e)}")
 
     def manage_account(self):
         self.manage_window = ManageAccountWidget()
