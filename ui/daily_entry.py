@@ -125,7 +125,7 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
         add_row("Total ₹:", self.total, "Type:", self.type)
 
         # --- Submit button ---
-        self.submit_btn = QtWidgets.QPushButton("💾 Save Entry")
+        self.submit_btn = QtWidgets.QPushButton(" Save Entry")
         self.submit_btn.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.submit_btn.setStyleSheet("""
             QPushButton {
@@ -160,7 +160,7 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
         table_layout.setSpacing(5)
         table_layout.setContentsMargins(15, 10, 15, 10)
 
-        lbl = QtWidgets.QLabel("📊 Records for Selected Date & Shift")
+        lbl = QtWidgets.QLabel(" Records for Selected Date & Shift")
         lbl.setAlignment(Qt.AlignCenter)
         lbl.setStyleSheet("""
             background: #e3f2fd;
@@ -216,7 +216,7 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
         bottom_layout = QtWidgets.QHBoxLayout(bottom_box)
         bottom_layout.setSpacing(25)
 
-        self.back_btn = QPushButton("◀️ Back")
+        self.back_btn = QPushButton("◀ Back")
         self.back_btn.clicked.connect(self.close)
         self.back_btn.setStyleSheet("background:#ddd; font-weight:600; padding:8px 15px; border-radius:8px;")
         bottom_layout.addWidget(self.back_btn, alignment=Qt.AlignLeft)
@@ -307,24 +307,22 @@ class DailyCollectionDashboard(QtWidgets.QWidget):
         try:
             account_no = int(self.account_no.text())
         except:
-            QMessageBox.warning(self, "Invalid", "Enter valid Account Number.")
+            QMessageBox.warning(self, "Invalid", "सही अकाउंट नंबर डालें।")
             return
 
         result = make_entry(account_no, qty, float(self.fat.text()), int(self.clr.text()),
                             rate, total, date_str, shift, milk_type)
         if isinstance(result, Exception):
             if "UNIQUE constraint failed" in str(result):
-                QMessageBox.warning(self, "Duplicate Entry ⚠️",
-                                    "This account already has an entry for this date and shift.")
+                QMessageBox.warning(self, "Duplicate Entry ",
+                                    "इस अकाउंट में इस तारीख और शिफ्ट के लिए पहले से ही एक एंट्री मौजूद है।")
             else:
                 QMessageBox.critical(self, "Database Error", f"Error inserting data:\n{result}")
             return
-        print_text=f"Date-{date_str}-{shift}\nAC-{account_no}-{self.name.text()}\nLTR - {qty}\nFAT - {self.fat.text()}{milk_type}\nCLR - {self.clr.text()}"
+        print_text=f"Date:{date_str}:{shift}\nAC-: {account_no}:{self.name.text()}\nLTR -: {qty}\nFAT -: {self.fat.text()}{milk_type}\nCLR -: {self.clr.text()}"
 
-        print_text+=f"\nRATE - {rate}\nTOTAL -{total}"
-
+        print_text+=f"\nRATE -:{rate}\nTOTAL -:{total}"
         print_direct(print_text)
-
         QMessageBox.information(self, "Saved ✅", "Entry added successfully!")
         self.load_previous_records()
 
